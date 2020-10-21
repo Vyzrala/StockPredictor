@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import datetime
 import numpy as np
-import tensorflow as tf
 import random
 import time
 import pickle
@@ -18,7 +17,8 @@ from scipy import stats
 
 
 class Predictor:
-    def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60, epochs_number: int=5, batch: int=32, error_impact: float=0.8) -> None:
+    def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60,
+                 epochs_number: int=5, batch: int=32, error_impact: float=0.8) -> None:
         self.raw_dataset = None
         self.correlation_threshold = correlation_threshold
         self.train_data = None
@@ -146,6 +146,7 @@ class Predictor:
             self.number_of_features = metrics["features_number"]
             self.RMSE = metrics["rmse"]
             self.raw_dataset = metrics["raw_dataset"]
+            del metrics
             self.model = load_model(folder_path+"/model.h5")
             print("Model summary:\n", self.model.summary())
             
