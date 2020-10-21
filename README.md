@@ -1,0 +1,2 @@
+# StockPredictorLSTM
+Thesis project
