@@ -39,8 +39,8 @@ class Predictor:
             Method creates model, train it and provide error distribution 
             dataset - whole dataset on which model will be trained
             DataFrame:
-                index: DateTime
-                columns: High, Low, Open, Close, Volume, Adj Close
+                index: integers
+                columns: Date, High, Low, Open, Close, Volume, Adj Close
         """
         tmp = None
         try:
@@ -130,7 +130,9 @@ class Predictor:
             return self.one_by_one_df
 
     def load_model(self, folder_name: str) -> bool:
-        folder_path = "StockPredictorLSTM/DATA/"+folder_name
+        cwd = os.getcwd().replace("\\", "/")
+        folder_path = cwd + "/DATA/"+folder_name
+
         if not os.path.exists(folder_path):
             print("No data to load")
             return False
@@ -163,8 +165,8 @@ class Predictor:
                 "rmse": self.RMSE,
                 "raw_dataset": self.raw_dataset[-self.backword_days:],
             }
-
-            folder_path = "StockPredictorLSTM/DATA/" + folder_name
+            cwd = os.getcwd().replace("\\", "/")
+            folder_path = cwd + "/DATA/" + folder_name
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
             
