@@ -11,15 +11,15 @@ if __name__ == "__main__":
     df.reset_index(inplace=True)
 
     model = Predictor()
-    # model.create_model(df)
-    # model.display_info()
+    model.create_model(df)
+    model.display_info()
     days = 15
-    # print("\n{} days forword:\n".format(days), model.predict(days))
+    print("\n{} days forword:\n".format(days), model.predict(days))
     # model.prediction_plot("Close", COMPANY_NAME, days)
 
     ### Saving model test
     # model.save_model(COMPANY_NAME)
     
     ### Loading model test
-    model.load_model(COMPANY_NAME)
-    print("\n{} days forword:\n".format(days), model.predict(days))
+    # model.load_model(COMPANY_NAME)
+    # print("\n{} days forword:\n".format(days), model.predict(days))
