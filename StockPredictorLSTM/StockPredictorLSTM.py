@@ -163,7 +163,7 @@ class Predictor:
                 "backword_days": self.backword_days,
                 "features_number": self.number_of_features,
                 "rmse": self.RMSE,
-                "raw_dataset": self.raw_dataset[-self.backword_days:],
+                "raw_dataset": self.raw_dataset,
             }
             cwd = os.getcwd().replace("\\", "/")
             folder_path = cwd + "/DATA/" + folder_name
