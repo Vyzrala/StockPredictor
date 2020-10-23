@@ -5,7 +5,7 @@ with open('README.md', 'r') as ld:
 
 setuptools.setup(
     name="StockPredictorLSTM",
-    version="0.1.1",
+    version="0.1.2",
     description="Thesis project",
     long_description=long_description,
     author="Marcin Hebdzynski",
