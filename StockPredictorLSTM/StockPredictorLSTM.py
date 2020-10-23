@@ -167,7 +167,6 @@ class Predictor:
         """
         cwd = os.getcwd().replace("\\", "/")
         folder_path = cwd + "/StockPredictorLSTM/DATA/"+folder_name
-        print(folder_path)
         if not os.path.exists(folder_path):
             print("No data to load")
             return False
