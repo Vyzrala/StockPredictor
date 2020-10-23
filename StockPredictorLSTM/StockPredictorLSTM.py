@@ -37,6 +37,7 @@ class Predictor:
         self.split_ratio = split_ratio
         self.backword_days = backword_days
         self.epochs_number = epochs_number
+        self.training_time = None
         self.batch = batch
         self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.model = None
@@ -57,17 +58,7 @@ class Predictor:
                 index: integers
                 columns: Date, High, Low, Open, Close, Volume, Adj Close
         """
-        decision = ""
-        if self.model is not None:
-            decision = input("Do you want to load new dataset and use old model? (y/n) > ")
-        if decision == 'y':
-            self.raw_dataset = dataset.copy()
-            return
-        elif decision == 'n':
-            self.raw_dataset = dataset.copy()
-        else:
-            print("Bad input...")
-            return
+        self.raw_dataset = dataset.copy()
         
         # Additional features
         dataset['High_Low diff'] = dataset['High'] - dataset['Low']
@@ -164,6 +155,9 @@ class Predictor:
             self.one_by_one_df.rename(columns={"index":"Date"}, inplace=True)
 
             return self.one_by_one_df
+    
+    def change_dataset(self, new_dataset: pd.DataFrame) -> None:
+        self.raw_dataset = new_dataset
 
     def load_model(self, folder_name: str) -> bool:
         """
@@ -230,7 +224,6 @@ class Predictor:
             
             with open(folder_path+"/metrics.p", "wb") as handler:
                 pickle.dump(metrics, handler)
-
             self.model.save(folder_path+"/model.h5")
 
             return True
@@ -322,7 +315,7 @@ class Predictor:
             
         """
         print("\n\tINFO:")
-        print("\nTraining time: {:.5f}s".format(self.training_time))
+        if self.training_time is not None: print("\nTraining time: {:.5f}s".format(self.training_time))
         print("\nRMSE for each feature:\n", self.RMSE)
         print("Lowest RMSE feature: {}".format(self.RMSE[['RMSE [%]']].idxmin()[0]))
         print("\nError distribution:\n",
