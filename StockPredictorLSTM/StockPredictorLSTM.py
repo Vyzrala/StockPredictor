@@ -1,6 +1,8 @@
 from datetime import date
+from random import randrange
 import pandas as pd
 import matplotlib.pyplot as plt
+from pandas_datareader import data
 import seaborn as sb
 import datetime
 import numpy as np
@@ -12,6 +14,7 @@ from typing import Tuple
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, load_model
 from keras.layers import Dense, LSTM, Dropout
+from keras import regularizers
 import holidays
 from matplotlib import dates
 from scipy import stats
@@ -19,7 +22,14 @@ from scipy import stats
 
 class Predictor:
     def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60,
-                 epochs_number: int=5, batch: int=32, error_impact: float=0.8) -> None:
+                 epochs_number: int=200, batch: int=32, error_impact: float=0.8) -> None:
+        """
+            Description: 
+
+            Parameters
+            ----------
+
+        """
         self.raw_dataset = None
         self.correlation_threshold = correlation_threshold
         self.train_data = None
@@ -38,21 +48,26 @@ class Predictor:
 
     def create_model(self, dataset: pd.DataFrame) -> None:
         """
-            Method creates model, train it and provide error distribution 
-            dataset - whole dataset on which model will be trained
-            DataFrame:
+            Description: 
+                Method creates model, train it and provide error distribution
+
+            Parameters
+            ----------
+            dataset : pandas DataFrame
                 index: integers
                 columns: Date, High, Low, Open, Close, Volume, Adj Close
         """
-        tmp = None
-        try:
-            self.next_date = str(dataset.Date.iloc[-1].date() + datetime.timedelta(days=1))
-            tmp = dataset.set_index('Date')
-        except:
-            print("ERROR when index set")
-
-        self.raw_dataset = tmp.copy()
-        del tmp
+        decision = ""
+        if self.model is not None:
+            decision = input("Do you want to load new dataset and use old model? (y/n) > ")
+        if decision == 'y':
+            self.raw_dataset = dataset.copy()
+            return
+        elif decision == 'n':
+            self.raw_dataset = dataset.copy()
+        else:
+            print("Bad input...")
+            return
         
         # Additional features
         dataset['High_Low diff'] = dataset['High'] - dataset['Low']
@@ -74,6 +89,13 @@ class Predictor:
         self.train_data = self.scaler.fit_transform(self.train_data)
         self.test_data = self.scaler.transform(self.test_data)
         x_train, y_train = self.get_xy_sets(self.train_data, self.backword_days)
+
+        condidtion_1 = x_train is not None
+        condidtion_2 = x_train is not np.array([])
+        condidtion_3 = y_train is not None
+        condidtion_4 = y_train is not np.array([])
+        if not (condidtion_1 and condidtion_2 and condidtion_3 and condidtion_4):
+            return
       
         # Model initialization
         input_shape = (self.backword_days, self.number_of_features)
@@ -86,6 +108,9 @@ class Predictor:
 
         # Testing model on test set
         x_test, y_test = self.get_xy_sets(self.test_data, self.backword_days)
+        y_predictions = None
+        if x_test is None and y_test is None:
+            return
         y_predictions = self.model.predict(x_test)
 
         # Model evaluation
@@ -100,12 +125,20 @@ class Predictor:
 
     def predict(self, days: int) -> pd.DataFrame: 
         """
-            Predicting days one by one
-            days - number of days that model will predict
+            Description: 
+
+            Parameters
+            ----------
+
+            
+            Returns
+            -------
+            
         """
+        begin_date = str(self.raw_dataset.Date.iloc[-1].date() + datetime.timedelta(days=1))
+
         if not self.model:
-            print("Model is not initilize. Create model first.")
-            return
+            raise Exception("Model have not been initilized")
         else:
             # Take last X (backword_days) days and unfilter unsignificant features
             input_set = np.array(self.raw_dataset[-self.backword_days:][self.significant_features])
@@ -126,16 +159,27 @@ class Predictor:
             
             predictions = np.array(predictions).reshape(days, self.number_of_features)
             self.one_by_one_df = pd.DataFrame(predictions, columns=self.significant_features,
-                                              index=self.get_dates(self.next_date, days))
+                                              index=self.get_dates(begin_date, days))
             self.one_by_one_df.reset_index(inplace=True)
             self.one_by_one_df.rename(columns={"index":"Date"}, inplace=True)
 
             return self.one_by_one_df
 
     def load_model(self, folder_name: str) -> bool:
-        cwd = os.getcwd().replace("\\", "/")
-        folder_path = cwd + "/DATA/"+folder_name
+        """
+            Description: 
 
+            Parameters
+            ----------
+
+            
+            Returns
+            -------
+            
+        """
+        cwd = os.getcwd().replace("\\", "/")
+        folder_path = cwd + "/StockPredictorLSTM/DATA/"+folder_name
+        print(folder_path)
         if not os.path.exists(folder_path):
             print("No data to load")
             return False
@@ -158,6 +202,17 @@ class Predictor:
             return True
 
     def save_model(self, folder_name: str) -> bool:
+        """
+            Description: 
+
+            Parameters
+            ----------
+
+            
+            Returns
+            -------
+            
+        """
         if self.model:
             metrics = {
                 "error_dist": self.error_distribution,
@@ -169,7 +224,7 @@ class Predictor:
                 "raw_dataset": self.raw_dataset,
             }
             cwd = os.getcwd().replace("\\", "/")
-            folder_path = cwd + "/DATA/" + folder_name
+            folder_path = cwd + "/StockPredictorLSTM/DATA/" + folder_name
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
             
@@ -184,20 +239,88 @@ class Predictor:
             return False
 
     def initialize_model(self, shape: tuple) -> None:
+        """
+            Description: 
+
+            Parameters
+            ----------
+
+        """
         self.model = Sequential()
-        self.model.add(LSTM(50, activation='relu', return_sequences=True, input_shape=shape))
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+                        activity_regularizer=regularizers.l2(1e-5), input_shape=shape))
+        self.model.add(Dropout(0.15))
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+                        activity_regularizer=regularizers.l2(1e-5)))
         self.model.add(Dropout(0.1))
-        self.model.add(LSTM(50, activation='relu', return_sequences=True))
-        self.model.add(Dropout(0.1))
-        self.model.add(LSTM(50, activation='relu', return_sequences=True))
-        self.model.add(Dropout(0.1))
-        self.model.add(LSTM(50, activation='relu'))
-        self.model.add(Dropout(0.1))
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+                        activity_regularizer=regularizers.l2(1e-5)))
+        self.model.add(Dropout(0.05))
+        self.model.add(LSTM(50, activation='relu', bias_regularizer=regularizers.l2(1e-4), 
+                        activity_regularizer=regularizers.l2(1e-5)))
+        self.model.add(Dropout(0.05))
         self.model.add(Dense(shape[1]))
-        self.model.summary()
         self.model.compile(optimizer='adam', loss='mean_squared_error')
+        self.model.summary()
+
+    def get_xy_sets(self, data_set: np.array, batch_size: int) -> Tuple[np.array, np.array]:
+        """
+            Description: 
+
+            Parameters
+            ----------
+
+            
+            Returns
+            -------
+            
+        """
+        x = []  # dependent
+        y = []  # independent
+        dataset_size = len(data_set)
+        try:
+            if dataset_size < self.backword_days: raise Exception("Dataset too small")
+            for i in range(batch_size, dataset_size):
+                x.append(data_set[i-batch_size:i])
+                y.append(data_set[i])
+            return np.array(x), np.array(y)
+        except Exception("Dataset too small"):
+            print("Your dataset size: {}\nMinimum dataset size reqired: {}".format(dataset_size, self.backword_days))
+            return None, None
+    
+    def get_dates(self, beginning: str, days_forword: int) -> list:
+        """
+            Description: 
+
+            Parameters
+            ----------
+
+            
+            Returns
+            -------
+            
+        """
+        dates = []
+        day = datetime.datetime.strptime(beginning, "%Y-%m-%d").date()
+        holis = list(holidays.US(years=datetime.datetime.now().year).keys())
+        while len(dates) < days_forword:
+            if day not in holis and day.weekday() < 5:
+                dates.append(day)
+            day += datetime.timedelta(days=1)
+        return dates
 
     def display_info(self, error_boxplot: bool=False) -> None:
+        """
+            Description: 
+
+            Parameters
+            ----------
+
+            
+            Returns
+            -------
+            
+        """
         print("\n\tINFO:")
         print("\nTraining time: {:.5f}s".format(self.training_time))
         print("\nRMSE for each feature:\n", self.RMSE)
@@ -211,6 +334,17 @@ class Predictor:
             plt.show()      
 
     def prediction_plot(self, feature: str, COMPANY_NAME: str, forword_days: int) -> None:
+        """
+            Description: 
+
+            Parameters
+            ----------
+
+            
+            Returns
+            -------
+            
+        """
         if self.one_by_one_df is not None:
             to_plot = self.one_by_one_df.set_index("Date")
             plt.figure(figsize=(16,8))
@@ -230,26 +364,3 @@ class Predictor:
             plt.show()
         else:
             print("No data to plot.")
-
-    def get_xy_sets(self, data_set: np.array, batch_size: int) -> Tuple[np.array, np.array]:
-        x = []  # dependent
-        y = []  # independent
-        dataset_size = len(data_set)
-        try:
-            for i in range(batch_size, dataset_size):
-                x.append(data_set[i-batch_size:i])
-                y.append(data_set[i])
-            return np.array(x), np.array(y)
-        except:
-            print("Your dataset size: {}\nMinmum dataset size reqired: {}".format(dataset_size, self.backword_days))
-            return None, None
-    
-    def get_dates(self, beginning: str, days_forword: int) -> list:
-        dates = []
-        day = datetime.datetime.strptime(beginning, "%Y-%m-%d").date()
-        holis = list(holidays.US(years=datetime.datetime.now().year).keys())
-        while len(dates) < days_forword:
-            if day not in holis and day.weekday() < 5:
-                dates.append(day)
-            day += datetime.timedelta(days=1)
-        return dates
