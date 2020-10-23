@@ -156,9 +156,6 @@ class Predictor:
 
             return self.one_by_one_df
     
-    def change_dataset(self, new_dataset: pd.DataFrame) -> None:
-        self.raw_dataset = new_dataset
-
     def load_model(self, folder_name: str) -> bool:
         """
             Description: 
@@ -255,6 +252,9 @@ class Predictor:
         self.model.add(Dense(shape[1]))
         self.model.compile(optimizer='adam', loss='mean_squared_error')
         self.model.summary()
+
+    def change_dataset(self, new_dataset: pd.DataFrame) -> None:
+            self.raw_dataset = new_dataset
 
     def get_xy_sets(self, data_set: np.array, batch_size: int) -> Tuple[np.array, np.array]:
         """
