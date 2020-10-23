@@ -1,8 +1,5 @@
-from datetime import date
-from random import randrange
 import pandas as pd
 import matplotlib.pyplot as plt
-from pandas_datareader import data
 import seaborn as sb
 import datetime
 import numpy as np
