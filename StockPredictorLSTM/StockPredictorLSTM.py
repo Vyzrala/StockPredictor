@@ -1,3 +1,4 @@
+from datetime import date
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
@@ -33,6 +34,7 @@ class Predictor:
         self.error_distribution = None
         self.number_of_features = None
         self.error_impact = error_impact
+        self.one_by_one_df = None
 
     def create_model(self, dataset: pd.DataFrame) -> None:
         """
@@ -44,6 +46,7 @@ class Predictor:
         """
         tmp = None
         try:
+            self.next_date = str(dataset.Date.iloc[-1].date() + datetime.timedelta(days=1))
             tmp = dataset.set_index('Date')
         except:
             print("ERROR when index set")
@@ -123,7 +126,7 @@ class Predictor:
             
             predictions = np.array(predictions).reshape(days, self.number_of_features)
             self.one_by_one_df = pd.DataFrame(predictions, columns=self.significant_features,
-                                              index=self.get_dates(str(datetime.datetime.today().date()), days))
+                                              index=self.get_dates(self.next_date, days))
             self.one_by_one_df.reset_index(inplace=True)
             self.one_by_one_df.rename(columns={"index":"Date"}, inplace=True)
 
@@ -208,18 +211,19 @@ class Predictor:
             plt.show()      
 
     def prediction_plot(self, feature: str, COMPANY_NAME: str, forword_days: int) -> None:
-        if self.one_by_one_df:
+        if self.one_by_one_df is not None:
+            to_plot = self.one_by_one_df.set_index("Date")
             plt.figure(figsize=(16,8))
-            ax = sb.lineplot(data=self.one_by_one_df[[feature]], marker="o")
-            ax.set_xticklabels(self.one_by_one_df.index, rotation=45)
-            ax.set(xticks=self.one_by_one_df.index)
+            ax = sb.lineplot(data=to_plot[[feature]], marker="o")
+            ax.set_xticklabels(to_plot.index, rotation=45)
+            ax.set(xticks=to_plot.index)
             ax.xaxis.set_major_formatter(dates.DateFormatter("%d-%m"))
             plt.legend(["Predicted close prices"])
             plt.xlabel("Date")
             plt.ylabel("Price [$]")
             plt.title("{}: {} for next {} days".format(COMPANY_NAME, feature, forword_days))
 
-            for x, y in zip(self.one_by_one_df.index, self.one_by_one_df[[feature]].values):
+            for x, y in zip(to_plot.index, to_plot[[feature]].values):
                 label = "{:.2f}".format(y[0])
                 plt.annotate(label, (x,y), textcoords="offset points", xytext=(0,10), ha='center')
 
@@ -230,10 +234,15 @@ class Predictor:
     def get_xy_sets(self, data_set: np.array, batch_size: int) -> Tuple[np.array, np.array]:
         x = []  # dependent
         y = []  # independent
-        for i in range(batch_size, len(data_set)):
-            x.append(data_set[i-batch_size:i])
-            y.append(data_set[i])
-        return np.array(x), np.array(y)
+        dataset_size = len(data_set)
+        try:
+            for i in range(batch_size, dataset_size):
+                x.append(data_set[i-batch_size:i])
+                y.append(data_set[i])
+            return np.array(x), np.array(y)
+        except:
+            print("Your dataset size: {}\nMinmum dataset size reqired: {}".format(dataset_size, self.backword_days))
+            return None, None
     
     def get_dates(self, beginning: str, days_forword: int) -> list:
         dates = []

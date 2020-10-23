@@ -6,7 +6,7 @@ if __name__ == "__main__":
     pass
     # COMPANY_NAME = 'FB'
     # START_DATE = '2017-01-01'
-    # END_DATE = str(datetime.datetime.today().date())
+    # END_DATE = '2018-05-02'#str(datetime.datetime.today().date())
     # SOURCE = 'yahoo'
     # df = pdr.DataReader(COMPANY_NAME, SOURCE, START_DATE, END_DATE)
     # df.reset_index(inplace=True)
