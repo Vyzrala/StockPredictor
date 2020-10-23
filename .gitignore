@@ -130,5 +130,4 @@ dmypy.json
 .pyre/
 
 DATA/
-tests/
 pack_dist.py
