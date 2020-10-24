@@ -18,6 +18,13 @@ from scipy import stats
 
 
 class Predictor:
+    """
+        This is a thesis projects for bechelor degree at Gdańsk University of technology in Poland.
+        The Predictor class provides all nessecery methods and functionality for predicting future values of stocks for given company.
+        All you need to do is insert a data set and excute predict() method.
+        The creators of Predictor class are: Patryk Dunajewski, Marcin Hebdzyński and Kamil Rutkowski.
+    """
+
     def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60,
                  epochs_number: int=200, batch: int=32, error_impact: float=0.8) -> None:
         """

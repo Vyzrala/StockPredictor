@@ -20,7 +20,7 @@ class TestStockPredictorLSTM(unittest.TestCase):
         model.create_model(test_data)
         model.display_info()
         print("\n{} days forword:\n".format(DAYS), model.predict(DAYS))
-        model.prediction_plot("Close", COMPANY_NAME, DAYS)
+        # model.prediction_plot("Close", COMPANY_NAME, DAYS)
     
     def test_save_model(self):
         COMPANY_NAME = 'FB'
@@ -57,7 +57,6 @@ class TestStockPredictorLSTM(unittest.TestCase):
         START_DATE = '2017-01-01'
         END_DATE = str(datetime.datetime.today().date())
         SOURCE = 'yahoo'
-        DAYS = 15
         test_data = pdr.DataReader(COMPANY_NAME, SOURCE, START_DATE, END_DATE)[-10:]
         test_data.reset_index(inplace=True)
         model = Predictor(epochs_number=5)
