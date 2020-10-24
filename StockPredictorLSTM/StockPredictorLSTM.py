@@ -21,11 +21,22 @@ class Predictor:
     def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60,
                  epochs_number: int=200, batch: int=32, error_impact: float=0.8) -> None:
         """
-            Description: 
+            Description: Initialization method where you can specify many parameters
 
             Parameters
             ----------
-
+                correlaction_threshold : float
+                    threshold value <0, 1> that filter out features model will be trained on
+                split_ratio : float
+                    value <0, 1> that split dataset in test and test sets with specified ratio
+                backword_days : int
+                    number of days that model will require to predict further values
+                epochs_number : int
+                    number of epochs that model will be trained on
+                batch : int
+                    number of samples per batch of computation
+                error_impact : float
+                    how much of error value will be added to predicted value (noice)
         """
         self.raw_dataset = None
         self.correlation_threshold = correlation_threshold
@@ -52,8 +63,9 @@ class Predictor:
             Parameters
             ----------
             dataset : pandas DataFrame
-                index: integers
-                columns: Date, High, Low, Open, Close, Volume, Adj Close
+                raw dataset that model will use to train itself
+                    index: integers 
+                    columns: Date, High, Low, Open, Close, Volume, Adj Close
         """
         self.raw_dataset = dataset.copy()
         
@@ -113,15 +125,17 @@ class Predictor:
 
     def predict(self, days: int) -> pd.DataFrame: 
         """
-            Description: 
+            Description: Method predicts future values 
 
             Parameters
             ----------
-
+                days : int
+                    number of days that model will predict further
             
             Returns
             -------
-            
+                dataset with predicted values
+
         """
         begin_date = str(self.raw_dataset.Date.iloc[-1].date() + datetime.timedelta(days=1))
 
@@ -155,15 +169,16 @@ class Predictor:
     
     def load_model(self, folder_name: str) -> bool:
         """
-            Description: 
+            Description: Loads data about specific model
 
             Parameters
             ----------
-
+                folder_name : str
+                    name of folder where data about model will be saveds
             
             Returns
-            -------
-            
+            ------- 
+                boolean value according to succes of failure of loading data
         """
         cwd = os.getcwd().replace("\\", "/")
         folder_path = cwd + "/StockPredictorLSTM/DATA/"+folder_name
@@ -190,15 +205,16 @@ class Predictor:
 
     def save_model(self, folder_name: str) -> bool:
         """
-            Description: 
+            Description: Save data about actually trained model
 
             Parameters
             ----------
-
+                folder_name : str
+                    name of dictionary where data about model will be saved
             
             Returns
             -------
-            
+                boolean value according to success of failure of action
         """
         if self.model:
             metrics = {
@@ -224,27 +240,32 @@ class Predictor:
             print("No model to save.")
             return False
 
-    def initialize_model(self, shape: tuple) -> None:
+    def initialize_model(self, shape: Tuple[int, int]) -> None:
         """
-            Description: 
+            Description: Method initialize structure of model
 
             Parameters
             ----------
-
+                shape : tuple of integers
+                    shape of training dataset
         """
         self.model = Sequential()
         self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
                         activity_regularizer=regularizers.l2(1e-5), input_shape=shape))
         self.model.add(Dropout(0.15))
+
         self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
                         activity_regularizer=regularizers.l2(1e-5)))
         self.model.add(Dropout(0.1))
+
         self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
                         activity_regularizer=regularizers.l2(1e-5)))
         self.model.add(Dropout(0.05))
+
         self.model.add(LSTM(50, activation='relu', bias_regularizer=regularizers.l2(1e-4), 
                         activity_regularizer=regularizers.l2(1e-5)))
         self.model.add(Dropout(0.05))
+        
         self.model.add(Dense(shape[1]))
         self.model.compile(optimizer='adam', loss='mean_squared_error')
         self.model.summary()
@@ -252,26 +273,28 @@ class Predictor:
     def change_dataset(self, new_dataset: pd.DataFrame) -> None:
             self.raw_dataset = new_dataset
 
-    def get_xy_sets(self, data_set: np.array, batch_size: int) -> Tuple[np.array, np.array]:
+    def get_xy_sets(self, dataset: np.array, batch_size: int) -> Tuple[np.array, np.array]:
         """
-            Description: 
+            Description: Method splits test and train data into two sets of dependent and independent variables
 
             Parameters
             ----------
-
-            
+                dataset : numpy array
+                    dataset in form of numpy array
+                batch_size : int
+                    number of samples in single batch for training
             Returns
             -------
-            
+                Two numpy arrays of splited dataset into x and y sets
         """
         x = []  # dependent
         y = []  # independent
-        dataset_size = len(data_set)
+        dataset_size = len(dataset)
         try:
             if dataset_size < self.backword_days: raise Exception("Dataset too small")
             for i in range(batch_size, dataset_size):
-                x.append(data_set[i-batch_size:i])
-                y.append(data_set[i])
+                x.append(dataset[i-batch_size:i])
+                y.append(dataset[i])
             return np.array(x), np.array(y)
         except Exception("Dataset too small"):
             print("Your dataset size: {}\nMinimum dataset size reqired: {}".format(dataset_size, self.backword_days))
@@ -279,15 +302,17 @@ class Predictor:
     
     def get_dates(self, beginning: str, days_forword: int) -> list:
         """
-            Description: 
+            Description: Generates list of dates for given number of days from beginning date ommiting holidays and weekends
 
             Parameters
             ----------
-
-            
+                beginning : str
+                    date from with dates will be generated
+                days_forword : int
+                    number of working days futher form beginning date
             Returns
             -------
-            
+                List of dates
         """
         dates = []
         day = datetime.datetime.strptime(beginning, "%Y-%m-%d").date()
@@ -300,15 +325,13 @@ class Predictor:
 
     def display_info(self, error_boxplot: bool=False) -> None:
         """
-            Description: 
+            Description: Method displays information about model such as: training time, RMSE for each feature, error distribution
 
             Parameters
             ----------
+                error_boxplot : bool
+                    parameter that decide wether to display or not error distribution boxplots for each feature
 
-            
-            Returns
-            -------
-            
         """
         print("\n\tINFO:")
         if self.training_time is not None: print("\nTraining time: {:.5f}s".format(self.training_time))
@@ -322,19 +345,23 @@ class Predictor:
             plt.boxplot(self.error_distribution, labels=self.significant_features)
             plt.show()      
 
-    def prediction_plot(self, feature: str, COMPANY_NAME: str, forword_days: int) -> None:
+    def prediction_plot(self, feature: str, company_name: str, forword_days: int) -> None:
         """
-            Description: 
+            Description: Method displays plot of predicted values if such data exists
 
             Parameters
             ----------
-
-            
-            Returns
-            -------
-            
+                feature : str 
+                    feature that we want to visualize
+                company_name : str
+                    name of company to which the data relates
+                forword_days : int
+                    number of days to display
         """
-        if self.one_by_one_df is not None:
+        if self.one_by_one_df is not None and \
+            feature in self.one_by_one_df.columns and \
+            forword_days == self.one_by_one_df.shape[0]:
+
             to_plot = self.one_by_one_df.set_index("Date")
             plt.figure(figsize=(16,8))
             ax = sb.lineplot(data=to_plot[[feature]], marker="o")
@@ -344,7 +371,7 @@ class Predictor:
             plt.legend(["Predicted close prices"])
             plt.xlabel("Date")
             plt.ylabel("Price [$]")
-            plt.title("{}: {} for next {} days".format(COMPANY_NAME, feature, forword_days))
+            plt.title("{}: {} for next {} days".format(company_name, feature, forword_days))
 
             for x, y in zip(to_plot.index, to_plot[[feature]].values):
                 label = "{:.2f}".format(y[0])
@@ -352,4 +379,6 @@ class Predictor:
 
             plt.show()
         else:
-            print("No data to plot.")
+            print("\nERROR\n----------------------------------------")
+            print("Your feature: {} | Availabe features: {}".format(feature, list(self.one_by_one_df.columns)))
+            print("Your days forword: {} | Available days forword: {}\n".format(forword_days, self.one_by_one_df.shape[0]))

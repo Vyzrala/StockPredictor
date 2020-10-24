@@ -20,6 +20,7 @@ class TestStockPredictorLSTM(unittest.TestCase):
         model.create_model(test_data)
         model.display_info()
         print("\n{} days forword:\n".format(DAYS), model.predict(DAYS))
+        model.prediction_plot("Close", COMPANY_NAME, DAYS)
     
     def test_save_model(self):
         COMPANY_NAME = 'FB'

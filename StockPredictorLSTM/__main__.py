@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # model.create_model(df)
     model.display_info()
     days = 15
-    print("\n{} days forword:\n".format(days), model.predict(days))
+    # print("\n{} days forword:\n".format(days), model.predict(days))
 
     ### Saving model test
     # model.save_model(COMPANY_NAME)
