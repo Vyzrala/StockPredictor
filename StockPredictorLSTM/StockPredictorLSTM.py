@@ -1,21 +1,21 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sb
+import os
+import time
+import random
+import pickle
+import holidays
 import datetime
 import numpy as np
-import random
-import time
-import pickle
-import os
+import pandas as pd
+import seaborn as sb
+from scipy import stats
 from typing import Tuple
+from matplotlib import dates
+import matplotlib.pyplot as plt
+import pandas_datareader as pdr
+from keras import regularizers
+from keras.layers import Dense, LSTM, Dropout
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, load_model
-from keras.layers import Dense, LSTM, Dropout
-from keras import regularizers
-import holidays
-from matplotlib import dates
-from scipy import stats
-
 
 class Predictor:
     """
@@ -278,7 +278,45 @@ class Predictor:
         self.model.summary()
 
     def change_dataset(self, new_dataset: pd.DataFrame) -> None:
+        """
+            Descruption: Method changes operating dataset for new inserted one, if the columns in both are same
+
+            Parameters
+            ----------
+                new_dataset : pandas DataFrame
+                    new dataset that will be replaced with old one if it is possible
+        """
+
+        if all(col in self.raw_dataset for col in new_dataset.columns):
             self.raw_dataset = new_dataset
+            return True
+        else:
+            return False
+    
+    def download_dataset(self, beginning_date: str, end_date: str, company: str) -> pd.DataFrame:
+        """
+            Description: Method downloads data do pandas DataFrame from https://finance.yahoo.com/. 
+                         
+            Parameters
+            ----------
+                beginning_date : str
+                    Date from which data will be downloaded
+                end_date : str
+                    Date till which data will be downloaded
+                company : str
+                    company name of whose data will be downloaded
+            
+            Returns
+            -------
+                pandas DataFrame object with requested data in form of 
+                    index: Timestamp
+                    columns: High, Low, Open, Close, Volume, Adj Close
+        """
+
+        source = 'yahoo'
+        dataset = pdr.DataReader(company, source, beginning_date, end_date)
+        dataset.reset_index(inplace=True)
+        return dataset
 
     def get_xy_sets(self, dataset: np.array, batch_size: int) -> Tuple[np.array, np.array]:
         """
@@ -370,7 +408,8 @@ class Predictor:
             forword_days == self.one_by_one_df.shape[0]:
 
             to_plot = self.one_by_one_df.set_index("Date")
-            plt.figure(figsize=(16,8))
+            fig = plt.figure(figsize=(16,8))
+            fig.canvas.set_window_title("{} predictions for next {} days".format(company_name, forword_days))
             ax = sb.lineplot(data=to_plot[[feature]], marker="o")
             ax.set_xticklabels(to_plot.index, rotation=45)
             ax.set(xticks=to_plot.index)
