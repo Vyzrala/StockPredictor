@@ -428,3 +428,45 @@ class Predictor:
             print("\nERROR\n----------------------------------------")
             print("Your feature: {} | Availabe features: {}".format(feature, list(self.one_by_one_df.columns)))
             print("Your days forword: {} | Available days forword: {}\n".format(forword_days, self.one_by_one_df.shape[0]))
+
+    def compare_directions(sefl, predictions, valid_set, feature):
+        """
+            Description: This method perform simulation of correctly predicted direction of prices between days.
+                         You need a set of valid data that could be compared with predictions. 
+                         This an accuracy measure function of out project.
+            
+            Parameters
+            ----------
+                predictions : pandas DataFrame
+                    A dataset containing predicted values
+                valid_set : pandas DataFrame
+                    A dataset containing valid values. Will be compared with predictions
+                feature : str
+                    Feature that will be tested
+            
+            Returns
+            -------
+                Dictionary with metrics describing correctness of predicted ups and downs
+        """
+        def graph_directions(dataset):
+            directions = []
+            for i in range(len(dataset)-1):
+                direction = dataset[i+1:i+2] - dataset[i:i+1]
+                if direction > 0: directions.append(1)  # UP
+                elif direction == 0: directions.append(0)  # CONST
+                else: directions.append(-1)  # DOWN
+            return np.array(directions)
+
+        if len(predictions[feature]) != len(valid_set[feature]): 
+            print("Wrong input")
+            return
+        predictions = graph_directions(predictions[feature].values)
+        valid_set = graph_directions(valid_set[feature].values)
+        comparison = list(map(lambda x: 1 if x else 0, predictions == valid_set))
+        correct = sum(comparison)
+        cases = len(comparison)
+        rv = {"Correctness [%]": round(100*correct/cases, 3),
+              "Correct": correct,
+              "Cases": cases,
+              "Distribution": comparison}
+        return rv
