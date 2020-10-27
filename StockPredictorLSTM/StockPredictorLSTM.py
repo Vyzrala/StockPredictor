@@ -429,7 +429,7 @@ class Predictor:
             print("Your feature: {} | Availabe features: {}".format(feature, list(self.one_by_one_df.columns)))
             print("Your days forword: {} | Available days forword: {}\n".format(forword_days, self.one_by_one_df.shape[0]))
 
-    def compare_directions(sefl, predictions, valid_set, feature):
+    def compare_directions(self, predictions, valid_set, feature):
         """
             Description: This method perform simulation of correctly predicted direction of prices between days.
                          You need a set of valid data that could be compared with predictions. 
