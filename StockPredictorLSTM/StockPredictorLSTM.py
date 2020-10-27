@@ -256,24 +256,45 @@ class Predictor:
                 shape : tuple of integers
                     shape of training dataset
         """
-        self.model = Sequential()
-        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
-                        activity_regularizer=regularizers.l2(1e-5), input_shape=shape))
-        self.model.add(Dropout(0.15))
+        self.model = Sequential([
+            LSTM(50, activation='relu', return_sequences=True, 
+                    bias_regularizer=regularizers.l2(1e-4), 
+                    activity_regularizer=regularizers.l2(1e-5), 
+                    input_shape=shape),
+            Dropout(0.15),
+            LSTM(50, activation='relu', return_sequences=True, 
+                    bias_regularizer=regularizers.l2(1e-4), 
+                    activity_regularizer=regularizers.l2(1e-5)),
+            Dropout(0.1),
+            LSTM(50, activation='relu', return_sequences=True, 
+                    bias_regularizer=regularizers.l2(1e-4), 
+                    activity_regularizer=regularizers.l2(1e-5)),
+            Dropout(0.05),
+            LSTM(50, activation='relu', return_sequences=True, 
+                    bias_regularizer=regularizers.l2(1e-4), 
+                    activity_regularizer=regularizers.l2(1e-5)),
+            Dropout(0.05),
+            Dense(shape[1])
+        ])
 
-        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
-                        activity_regularizer=regularizers.l2(1e-5)))
-        self.model.add(Dropout(0.1))
+        # self.model = Sequential()
+        # self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+        #                 activity_regularizer=regularizers.l2(1e-5), input_shape=shape))
+        # self.model.add(Dropout(0.15))
 
-        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
-                        activity_regularizer=regularizers.l2(1e-5)))
-        self.model.add(Dropout(0.05))
+        # self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+        #                 activity_regularizer=regularizers.l2(1e-5)))
+        # self.model.add(Dropout(0.1))
 
-        self.model.add(LSTM(50, activation='relu', bias_regularizer=regularizers.l2(1e-4), 
-                        activity_regularizer=regularizers.l2(1e-5)))
-        self.model.add(Dropout(0.05))
+        # self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+        #                 activity_regularizer=regularizers.l2(1e-5)))
+        # self.model.add(Dropout(0.05))
+
+        # self.model.add(LSTM(50, activation='relu', bias_regularizer=regularizers.l2(1e-4), 
+        #                 activity_regularizer=regularizers.l2(1e-5)))
+        # self.model.add(Dropout(0.05))
         
-        self.model.add(Dense(shape[1]))
+        # self.model.add(Dense(shape[1]))
         self.model.compile(optimizer='adam', loss='mean_squared_error')
         self.model.summary()
 

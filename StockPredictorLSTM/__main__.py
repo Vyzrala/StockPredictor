@@ -21,5 +21,6 @@ if __name__ == "__main__":
     #     print("{}:\t{}".format(feature, model.compare_directions(predictions, df[-days:], feature)))
     # model.save_model(COMPANY_NAME)
 
+
     del model
     
