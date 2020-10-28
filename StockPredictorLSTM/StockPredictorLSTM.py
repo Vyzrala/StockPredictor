@@ -52,11 +52,12 @@ class Predictor:
         self.split_ratio = split_ratio
         self.backword_days = backword_days
         self.epochs_number = epochs_number
-        self.training_time = None
+        self.first_training_time = None
+        self.final_training_time = None
         self.batch = batch
         self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.model = None
-        self.RMSE = None
+        self.rmse = None
         self.error_distribution = None
         self.number_of_features = None
         self.error_impact = error_impact
@@ -109,9 +110,11 @@ class Predictor:
         self.initialize_model(input_shape)
 
         # Model training
+        print("First training:")
         start_time = time.time()
         self.model.fit(x_train, y_train, epochs=self.epochs_number, batch_size=self.batch, validation_split=.05)
-        self.training_time = time.time() - start_time
+        self.first_training_time = time.time() - start_time
+        print("First training duration: {:.5f}s".format(self.first_training_time))
 
         # Testing model on test set
         x_test, y_test = self.get_xy_sets(self.test_data, self.backword_days)
@@ -123,12 +126,21 @@ class Predictor:
         # Model evaluation
         y_predictions = self.scaler.inverse_transform(y_predictions)
         y_test = self.scaler.inverse_transform(y_test)
-        self.RMSE = pd.DataFrame([np.sqrt(np.mean((y_test[:,i] - y_predictions[:,i])**2)) for i in range(y_test.shape[1])],
+        self.rmse = pd.DataFrame([np.sqrt(np.mean((y_test[:,i] - y_predictions[:,i])**2)) for i in range(y_test.shape[1])],
                                  index=self.significant_features, columns=['RMSE [%]'])
 
         # Error distribution
         self.error_distribution = y_test - y_predictions
         self.error_distribution = self.error_distribution[(np.abs(stats.zscore(self.error_distribution))<3).all(axis=1)]
+
+        # Final training
+        final_dataset = self.scaler.transform(dataset)
+        final_x, final_y = self.get_xy_sets(final_dataset, self.backword_days)
+        print("\nFinal training:")
+        start_time = time.time()
+        self.model.fit(final_x, final_y, epochs=self.epochs_number, batch_size=self.batch, validation_split=0.05)
+        self.final_training_time = time.time() - start_time
+        print("Final traning duration: {:.5f}s".format(self.final_training_time))
 
     def predict(self, days: int) -> pd.DataFrame: 
         """
@@ -202,7 +214,7 @@ class Predictor:
             self.significant_features = metrics["features"]
             self.backword_days = metrics["backword_days"]
             self.number_of_features = metrics["features_number"]
-            self.RMSE = metrics["rmse"]
+            self.rmse = metrics["rmse"]
             self.raw_dataset = metrics["raw_dataset"]
             del metrics
             self.model = load_model(folder_path+"/model.h5")
@@ -230,7 +242,7 @@ class Predictor:
                 "features": self.significant_features,
                 "backword_days": self.backword_days,
                 "features_number": self.number_of_features,
-                "rmse": self.RMSE,
+                "rmse": self.rmse,
                 "raw_dataset": self.raw_dataset,
             }
             cwd = os.getcwd().replace("\\", "/")
@@ -256,45 +268,24 @@ class Predictor:
                 shape : tuple of integers
                     shape of training dataset
         """
-        self.model = Sequential([
-            LSTM(50, activation='relu', return_sequences=True, 
-                    bias_regularizer=regularizers.l2(1e-4), 
-                    activity_regularizer=regularizers.l2(1e-5), 
-                    input_shape=shape),
-            Dropout(0.15),
-            LSTM(50, activation='relu', return_sequences=True, 
-                    bias_regularizer=regularizers.l2(1e-4), 
-                    activity_regularizer=regularizers.l2(1e-5)),
-            Dropout(0.1),
-            LSTM(50, activation='relu', return_sequences=True, 
-                    bias_regularizer=regularizers.l2(1e-4), 
-                    activity_regularizer=regularizers.l2(1e-5)),
-            Dropout(0.05),
-            LSTM(50, activation='relu', return_sequences=True, 
-                    bias_regularizer=regularizers.l2(1e-4), 
-                    activity_regularizer=regularizers.l2(1e-5)),
-            Dropout(0.05),
-            Dense(shape[1])
-        ])
+        self.model = Sequential()
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+                        activity_regularizer=regularizers.l2(1e-5), input_shape=shape))
+        self.model.add(Dropout(0.15))
 
-        # self.model = Sequential()
-        # self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
-        #                 activity_regularizer=regularizers.l2(1e-5), input_shape=shape))
-        # self.model.add(Dropout(0.15))
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+                        activity_regularizer=regularizers.l2(1e-5)))
+        self.model.add(Dropout(0.1))
 
-        # self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
-        #                 activity_regularizer=regularizers.l2(1e-5)))
-        # self.model.add(Dropout(0.1))
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+                        activity_regularizer=regularizers.l2(1e-5)))
+        self.model.add(Dropout(0.05))
 
-        # self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
-        #                 activity_regularizer=regularizers.l2(1e-5)))
-        # self.model.add(Dropout(0.05))
-
-        # self.model.add(LSTM(50, activation='relu', bias_regularizer=regularizers.l2(1e-4), 
-        #                 activity_regularizer=regularizers.l2(1e-5)))
-        # self.model.add(Dropout(0.05))
+        self.model.add(LSTM(50, activation='relu', bias_regularizer=regularizers.l2(1e-4), 
+                        activity_regularizer=regularizers.l2(1e-5)))
+        self.model.add(Dropout(0.05))
         
-        # self.model.add(Dense(shape[1]))
+        self.model.add(Dense(shape[1]))
         self.model.compile(optimizer='adam', loss='mean_squared_error')
         self.model.summary()
 
@@ -399,10 +390,15 @@ class Predictor:
                     parameter that decide wether to display or not error distribution boxplots for each feature
 
         """
-        print("\n\tINFO:")
-        if self.training_time is not None: print("\nTraining time: {:.5f}s".format(self.training_time))
-        print("\nRMSE for each feature:\n", self.RMSE)
-        print("Lowest RMSE feature: {}".format(self.RMSE[['RMSE [%]']].idxmin()[0]))
+        print("\n\tINFO:\n")
+        if self.first_training_time is not None: print("First training duration: {:.5f}s".format(self.first_training_time))
+        if self.final_training_time is not None: print("Final training duration: {:.5f}s".format(self.final_training_time))
+        if self.first_training_time is not None and self.final_training_time is not None:
+            total_training_time = self.final_training_time + self.first_training_time
+            print("Total training time: {:.3f}s ({:.2f} minutes)".format(total_training_time, total_training_time/60))
+
+        print("\nRMSE for each feature:\n", self.rmse)
+        print("Lowest RMSE feature: {}".format(self.rmse[['RMSE [%]']].idxmin()[0]))
         print("\nError distribution:\n",
                     pd.DataFrame(self.error_distribution, columns=self.significant_features).describe())
         
@@ -436,7 +432,7 @@ class Predictor:
             ax.set(xticks=to_plot.index)
             ax.xaxis.set_major_formatter(dates.DateFormatter("%d-%m"))
             plt.legend(["Predicted close prices"])
-            plt.xlabel("Date")
+            plt.xlabel("Date [dd-mm]")
             plt.ylabel("Price [$]")
             plt.title("{}: {} for next {} days".format(company_name, feature, forword_days))
 
@@ -450,11 +446,11 @@ class Predictor:
             print("Your feature: {} | Availabe features: {}".format(feature, list(self.one_by_one_df.columns)))
             print("Your days forword: {} | Available days forword: {}\n".format(forword_days, self.one_by_one_df.shape[0]))
 
-    def compare_directions(self, predictions, valid_set, feature):
+    def compare_directions(self, predictions, valid_set, feature) -> dict:
         """
             Description: This method perform simulation of correctly predicted direction of prices between days.
                          You need a set of valid data that could be compared with predictions. 
-                         This an accuracy measure function of out project.
+                         This is an accuracy measure function of out project.
             
             Parameters
             ----------
