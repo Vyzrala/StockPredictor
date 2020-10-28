@@ -54,6 +54,7 @@ class Predictor:
         self.epochs_number = epochs_number
         self.first_training_time = None
         self.final_training_time = None
+        self.total_training_time = None
         self.batch = batch
         self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.model = None
@@ -114,7 +115,7 @@ class Predictor:
         start_time = time.time()
         self.model.fit(x_train, y_train, epochs=self.epochs_number, batch_size=self.batch, validation_split=.05)
         self.first_training_time = time.time() - start_time
-        print("First training duration: {:.5f}s".format(self.first_training_time))
+        print("First training duration: {:.2f} minutes ({:.3f}s)".format(self.first_training_time/60, self.first_training_time))
 
         # Testing model on test set
         x_test, y_test = self.get_xy_sets(self.test_data, self.backword_days)
@@ -140,7 +141,8 @@ class Predictor:
         start_time = time.time()
         self.model.fit(final_x, final_y, epochs=self.epochs_number, batch_size=self.batch, validation_split=0.05)
         self.final_training_time = time.time() - start_time
-        print("Final traning duration: {:.5f}s".format(self.final_training_time))
+        print("Final traning duration: {:.2f} minutes ({:.3f}s)".format(self.final_training_time, self.final_training_time))
+        self.total_training_time = self.final_training_time + self.first_training_time
 
     def predict(self, days: int) -> pd.DataFrame: 
         """
@@ -205,17 +207,18 @@ class Predictor:
             print("No data to load")
             return False
         else:
-            metrics = None
+            metrics = {}
             with open(folder_path+"/metrics.p", "rb") as handler:
                 metrics = pickle.load(handler)
             
-            self.error_distribution = metrics["error_dist"]
-            self.scaler = metrics["scaler"]
-            self.significant_features = metrics["features"]
-            self.backword_days = metrics["backword_days"]
-            self.number_of_features = metrics["features_number"]
-            self.rmse = metrics["rmse"]
-            self.raw_dataset = metrics["raw_dataset"]
+            self.error_distribution = metrics.get('error_dist', None)
+            self.scaler = metrics.get('scaler', None)
+            self.significant_features = metrics.get('features', None)
+            self.backword_days = metrics.get('backword_days')
+            self.number_of_features = metrics.get('features_number', None)
+            self.rmse = metrics.get('rmse', None)
+            self.raw_dataset = metrics.get('raw_dataset', None)
+            self.total_training_time = metrics.get('total_training_time', None)
             del metrics
             self.model = load_model(folder_path+"/model.h5")
             print("Model summary:\n", self.model.summary())
@@ -244,6 +247,7 @@ class Predictor:
                 "features_number": self.number_of_features,
                 "rmse": self.rmse,
                 "raw_dataset": self.raw_dataset,
+                'total_training_time': self.total_training_time
             }
             cwd = os.getcwd().replace("\\", "/")
             folder_path = cwd + "/StockPredictorLSTM/DATA/" + folder_name
@@ -388,14 +392,12 @@ class Predictor:
             ----------
                 error_boxplot : bool
                     parameter that decide wether to display or not error distribution boxplots for each feature
-
         """
         print("\n\tINFO:\n")
-        if self.first_training_time is not None: print("First training duration: {:.5f}s".format(self.first_training_time))
-        if self.final_training_time is not None: print("Final training duration: {:.5f}s".format(self.final_training_time))
-        if self.first_training_time is not None and self.final_training_time is not None:
-            total_training_time = self.final_training_time + self.first_training_time
-            print("Total training time: {:.3f}s ({:.2f} minutes)".format(total_training_time, total_training_time/60))
+        if self.first_training_time is not None: print("First training time: {:.5f}s".format(self.first_training_time))
+        if self.final_training_time is not None: print("Final training time: {:.5f}s".format(self.final_training_time))
+        if self.total_training_time is not None:
+            print("Total training time: {:.2f} minutes ({:.3f}s)".format(self.total_training_time/60, self.total_training_time))
 
         print("\nRMSE for each feature:\n", self.rmse)
         print("Lowest RMSE feature: {}".format(self.rmse[['RMSE [%]']].idxmin()[0]))
@@ -428,7 +430,7 @@ class Predictor:
             fig = plt.figure(figsize=(16,8))
             fig.canvas.set_window_title("{} predictions for next {} days".format(company_name, forword_days))
             ax = sb.lineplot(data=to_plot[[feature]], marker="o")
-            ax.set_xticklabels(to_plot.index, rotation=45)
+            ax.set_xticklabels(to_plot.index, rotation=20)
             ax.set(xticks=to_plot.index)
             ax.xaxis.set_major_formatter(dates.DateFormatter("%d-%m"))
             plt.legend(["Predicted close prices"])
