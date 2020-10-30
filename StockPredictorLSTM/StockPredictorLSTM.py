@@ -16,6 +16,8 @@ from keras import regularizers
 from keras.layers import Dense, LSTM, Dropout
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, load_model
+from sklearn.utils import validation
+from tensorflow.python.keras.optimizers import Optimizer
 
 class Predictor:
     """
@@ -26,7 +28,7 @@ class Predictor:
     """
 
     def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60,
-                 epochs_number: int=200, batch: int=32, error_impact: float=0.8) -> None:
+                 epochs_number: int=150, batch: int=32, error_impact: float=0.8) -> None:
         """
             Description: Initialization method where you can specify many parameters
 
@@ -52,9 +54,9 @@ class Predictor:
         self.split_ratio = split_ratio
         self.backword_days = backword_days
         self.epochs_number = epochs_number
-        self.first_training_time = None
-        self.final_training_time = None
-        self.total_training_time = None
+        self.first_training_time = 0
+        self.final_training_time = 0
+        self.total_training_time = 0
         self.batch = batch
         self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.model = None
@@ -113,9 +115,9 @@ class Predictor:
         # Model training
         print("First training:")
         start_time = time.time()
-        self.model.fit(x_train, y_train, epochs=self.epochs_number, batch_size=self.batch, validation_split=.05)
+        self.model.fit(x_train, y_train, epochs=self.epochs_number, batch_size=self.batch, validation_split=0.08)
         self.first_training_time = time.time() - start_time
-        print("First training duration: {:.2f} minutes ({:.3f}s)".format(self.first_training_time/60, self.first_training_time))
+        print("First training time: {:.2f} minutes ({:.3f}s)".format(self.first_training_time/60, self.first_training_time))
 
         # Testing model on test set
         x_test, y_test = self.get_xy_sets(self.test_data, self.backword_days)
@@ -133,15 +135,16 @@ class Predictor:
         # Error distribution
         self.error_distribution = y_test - y_predictions
         self.error_distribution = self.error_distribution[(np.abs(stats.zscore(self.error_distribution))<3).all(axis=1)]
-
+        print("RMSE:")
+        print(self.rmse)
         # Final training
-        final_dataset = self.scaler.transform(dataset)
+        final_dataset = self.scaler.fit_transform(dataset)
         final_x, final_y = self.get_xy_sets(final_dataset, self.backword_days)
         print("\nFinal training:")
         start_time = time.time()
-        self.model.fit(final_x, final_y, epochs=self.epochs_number, batch_size=self.batch, validation_split=0.05)
+        self.model.fit(final_x, final_y, epochs=self.epochs_number, batch_size=self.batch, validation_split=0.1)
         self.final_training_time = time.time() - start_time
-        print("Final traning duration: {:.2f} minutes ({:.3f}s)".format(self.final_training_time, self.final_training_time))
+        print("Final traning time: {:.2f} minutes ({:.3f}s)".format(self.final_training_time/60, self.final_training_time))
         self.total_training_time = self.final_training_time + self.first_training_time
 
     def predict(self, days: int) -> pd.DataFrame: 
@@ -171,14 +174,14 @@ class Predictor:
 
             day = 0
             while day < days:
-                p = self.model.predict(input_set)
-                p = self.scaler.inverse_transform(p)
-                predictions.append(p)
-                p += random.choice(self.error_distribution * self.error_impact)
-                pe = self.scaler.transform(p)
-                input_set = np.append(input_set[:, 1:], pe)
-                input_set = input_set.reshape(1, self.backword_days, self.number_of_features)
-                day += 1
+                p = self.model.predict(input_set)  # Predict future value
+                p = self.scaler.inverse_transform(p)  # Unscale predicted value
+                predictions.append(p)  # Save predicted and unscaled value to temporary variable
+                p += random.choice(self.error_distribution * self.error_impact)  # Add random error value to predicted value
+                pe = self.scaler.transform(p)  # Transform preidcted value with error to range <0, 1>
+                input_set = np.append(input_set[:, 1:], pe)  # Modify dataset, add predicted value to dataset
+                input_set = input_set.reshape(1, self.backword_days, self.number_of_features)  # Update shape of dataset that model will preodict from
+                day += 1  # Increment iterator
             
             predictions = np.array(predictions).reshape(days, self.number_of_features)
             self.one_by_one_df = pd.DataFrame(predictions, columns=self.significant_features,
@@ -221,6 +224,7 @@ class Predictor:
             self.total_training_time = metrics.get('total_training_time', None)
             del metrics
             self.model = load_model(folder_path+"/model.h5")
+            self.model.compile(optimizer='adam', loss='mean_squared_error')
             print("Model summary:\n", self.model.summary())
             
             return True
@@ -273,23 +277,24 @@ class Predictor:
                     shape of training dataset
         """
         self.model = Sequential()
-        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, 
+                        bias_regularizer=regularizers.l2(1e-4), 
                         activity_regularizer=regularizers.l2(1e-5), input_shape=shape))
         self.model.add(Dropout(0.15))
-
-        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, 
+                        bias_regularizer=regularizers.l2(1e-4), 
                         activity_regularizer=regularizers.l2(1e-5)))
         self.model.add(Dropout(0.1))
-
-        self.model.add(LSTM(50, activation='relu', return_sequences=True, bias_regularizer=regularizers.l2(1e-4), 
+        self.model.add(LSTM(50, activation='relu', return_sequences=True, 
+                        bias_regularizer=regularizers.l2(1e-4), 
                         activity_regularizer=regularizers.l2(1e-5)))
         self.model.add(Dropout(0.05))
-
-        self.model.add(LSTM(50, activation='relu', bias_regularizer=regularizers.l2(1e-4), 
+        self.model.add(LSTM(50, activation='relu', 
+                        bias_regularizer=regularizers.l2(1e-4), 
                         activity_regularizer=regularizers.l2(1e-5)))
         self.model.add(Dropout(0.05))
-        
         self.model.add(Dense(shape[1]))
+
         self.model.compile(optimizer='adam', loss='mean_squared_error')
         self.model.summary()
 
@@ -307,6 +312,7 @@ class Predictor:
             self.raw_dataset = new_dataset
             return True
         else:
+            print("Fail to change dataset")
             return False
     
     def download_dataset(self, beginning_date: str, end_date: str, company: str) -> pd.DataFrame:
