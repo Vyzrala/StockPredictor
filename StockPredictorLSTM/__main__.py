@@ -1,10 +1,16 @@
 from StockPredictorLSTM import Predictor
 import datetime
 
-if __name__ == "__main__":
-    COMPANY_NAME = 'AAPL'
-    START_DATE = '2012-01-01'
-    END_DATE = '2018-07-01' #str(datetime.datetime.today().date()) # '2020-01-01'
+# https://finance.yahoo.com/
+
+def main():
+    COMPANY_NAME = ''
+    if not COMPANY_NAME: 
+        print("NO COMAPNY NAME!")
+        return 
+    
+    START_DATE = '2018-01-01'
+    END_DATE = str(datetime.datetime.today().date()) # '2020-01-01'
 
     model = Predictor()
     # model.load_model(COMPANY_NAME)
@@ -25,4 +31,7 @@ if __name__ == "__main__":
 
 
     del model
+
+if __name__ == "__main__":
+    main()
     

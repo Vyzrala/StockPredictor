@@ -28,7 +28,7 @@ class Predictor:
     """
 
     def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60,
-                 epochs_number: int=150, batch: int=32, error_impact: float=0.8) -> None:
+                 epochs_number: int=120, batch: int=32, error_impact: float=0.8) -> None:
         """
             Description: Initialization method where you can specify many parameters
 
@@ -188,7 +188,7 @@ class Predictor:
                                               index=self.get_dates(begin_date, days))
             self.one_by_one_df.reset_index(inplace=True)
             self.one_by_one_df.rename(columns={"index":"Date"}, inplace=True)
-
+            self.one_by_one_df.Date = pd.to_datetime(self.one_by_one_df.Date)
             return self.one_by_one_df
     
     def load_model(self, folder_name: str) -> bool:
