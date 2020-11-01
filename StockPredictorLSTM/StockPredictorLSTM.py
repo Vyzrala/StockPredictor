@@ -131,12 +131,13 @@ class Predictor:
         y_test = self.scaler.inverse_transform(y_test)
         self.rmse = pd.DataFrame([np.sqrt(np.mean((y_test[:,i] - y_predictions[:,i])**2)) for i in range(y_test.shape[1])],
                                  index=self.significant_features, columns=['RMSE [%]'])
+        print("RMSE:")
+        print(self.rmse)
 
         # Error distribution
         self.error_distribution = y_test - y_predictions
         self.error_distribution = self.error_distribution[(np.abs(stats.zscore(self.error_distribution))<3).all(axis=1)]
-        print("RMSE:")
-        print(self.rmse)
+        
         # Final training
         final_dataset = self.scaler.fit_transform(dataset)
         final_x, final_y = self.get_xy_sets(final_dataset, self.backword_days)
