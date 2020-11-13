@@ -18,7 +18,7 @@ Installable package and manual are in *.zip file under 'StockPredictorLSTM/distr
 # Instalation
 
 ```
-Windows: 
+Windows:  double click on *.exe from distribution/StockPredictorLSTM.zip file or pip install StockPredictoLSTM-(version).tar.gz
 Linux: pip3 install StockPredictoLSTM-(version).tar.gz
 ```
 
