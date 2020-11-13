@@ -11,13 +11,13 @@ from scipy import stats
 import tensorflow as tf
 from typing import Tuple
 from matplotlib import dates
+from keras import regularizers
 import matplotlib.pyplot as plt
 import pandas_datareader as pdr
-from keras import regularizers
+from sklearn.utils import validation
 from keras.layers import Dense, LSTM, Dropout
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, load_model
-from sklearn.utils import validation
 from tensorflow.python.keras.optimizers import Optimizer
 
 class Predictor:
@@ -226,7 +226,8 @@ class Predictor:
             self.raw_dataset = metrics.get('raw_dataset', None)
             self.total_training_time = metrics.get('total_training_time', None)
             del metrics
-            self.model = load_model(folder_path+"/model.h5")
+            path = folder_path+"/model.h5"
+            self.model = load_model(path)
             self.model.compile(optimizer='adam', loss='mean_squared_error')
             print("Model summary:\n", self.model.summary())
             
