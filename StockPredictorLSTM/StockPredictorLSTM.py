@@ -23,9 +23,34 @@ from tensorflow.python.keras.optimizers import Optimizer
 class Predictor:
     """
         This is a thesis projects for bechelor degree at Gdańsk University of technology in Poland.
-        The Predictor class provides all nessecery methods and functionality for predicting future values of stocks for given company.
+        The Predictor class provides all nessecery methods and functionality 
+        for predicting future values of stocks for given company.
         All you need to do is insert a data set and excute predict() method.
         The creators of Predictor class are: Patryk Dunajewski, Marcin Hebdzyński and Kamil Rutkowski.
+        
+        Example use
+        -----------
+        from StockPredictorLSTM import Predictor
+
+        company = 'AAPL'
+        forecasted_value_name = 'Close'
+        days_forword = 15
+        start_date = '2015-01-01'
+        end_date = '2020-01-01'
+        predictor = Predictor()
+
+        # Use 1 - Initial use
+        dataset = predictor.download_dataset(start_date, end_date, company)
+        predictor.create_model(dataset)
+        predictor.display_info()
+        predictor.predict(days_forword)
+        predictor.prediction_plot(forecasted_value_name, company, days_forword)
+        predictor.save_model(company)
+
+        # Use 2
+        predictor.load_model(company)
+        predictor.predict(days_forword)
+        predictor.prediction_plot(forecasted_value_name, company, days_forword)
     """
 
     def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60,
@@ -97,7 +122,8 @@ class Predictor:
         # Splitting dataset into train and test sets
         dataset = np.array(dataset)
         split_index = int(dataset.shape[0] * self.split_ratio)
-        self.train_data, self.test_data = dataset[:split_index, :].copy(), dataset[split_index:, :].copy()
+        self.train_data = dataset[:split_index, :].copy()
+        self.test_data = dataset[split_index:, :].copy()
         self.train_data = self.scaler.fit_transform(self.train_data)
         self.test_data = self.scaler.transform(self.test_data)
         x_train, y_train = self.get_xy_sets(self.train_data, self.backword_days)
@@ -107,7 +133,7 @@ class Predictor:
         condidtion_3 = y_train is not None
         condidtion_4 = y_train is not np.array([])
         if not (condidtion_1 and condidtion_2 and condidtion_3 and condidtion_4):
-            return
+            return None
       
         # Model initialization
         input_shape = (self.backword_days, self.number_of_features)
@@ -116,37 +142,47 @@ class Predictor:
         # Model training
         print("First training:")
         start_time = time.time()
-        self.model.fit(x_train, y_train, epochs=self.epochs_number, batch_size=self.batch, validation_split=0.08)
+        self.model.fit(x_train, y_train, 
+                       epochs=self.epochs_number, 
+                       batch_size=self.batch, 
+                       validation_split=0.08)
         self.first_training_time = time.time() - start_time
-        print("First training time: {:.2f} minutes ({:.3f}s)".format(self.first_training_time/60, self.first_training_time))
+        print("First training time: {:.2f} minutes ({:.3f}s)"\
+            .format(self.first_training_time/60, self.first_training_time))
 
         # Testing model on test set
         x_test, y_test = self.get_xy_sets(self.test_data, self.backword_days)
         y_predictions = None
         if x_test is None and y_test is None:
-            return
+            return None
         y_predictions = self.model.predict(x_test)
 
         # Model evaluation
         y_predictions = self.scaler.inverse_transform(y_predictions)
         y_test = self.scaler.inverse_transform(y_test)
-        self.rmse = pd.DataFrame([np.sqrt(np.mean((y_test[:,i] - y_predictions[:,i])**2)) for i in range(y_test.shape[1])],
+        self.rmse = pd.DataFrame([np.sqrt(np.mean((y_test[:,i] - y_predictions[:,i])**2))
+                                  for i in range(y_test.shape[1])],
                                  index=self.significant_features, columns=['RMSE [%]'])
         print("RMSE:")
         print(self.rmse)
 
         # Error distribution
         self.error_distribution = y_test - y_predictions
-        self.error_distribution = self.error_distribution[(np.abs(stats.zscore(self.error_distribution))<3).all(axis=1)]
+        self.error_distribution = self.error_distribution[
+            (np.abs(stats.zscore(self.error_distribution))<3).all(axis=1)]
         
         # Final training
         final_dataset = self.scaler.fit_transform(dataset)
         final_x, final_y = self.get_xy_sets(final_dataset, self.backword_days)
         print("\nFinal training:")
         start_time = time.time()
-        self.model.fit(final_x, final_y, epochs=self.epochs_number, batch_size=self.batch, validation_split=0.1)
+        self.model.fit(final_x, final_y, 
+                       epochs=self.epochs_number, 
+                       batch_size=self.batch, 
+                       validation_split=0.1)
         self.final_training_time = time.time() - start_time
-        print("Final traning time: {:.2f} minutes ({:.3f}s)".format(self.final_training_time/60, self.final_training_time))
+        print("Final traning time: {:.2f} minutes ({:.3f}s)"\
+            .format(self.final_training_time/60, self.final_training_time))
         self.total_training_time = self.final_training_time + self.first_training_time
 
     def predict(self, days: int) -> pd.DataFrame: 
@@ -183,7 +219,6 @@ class Predictor:
                 pe = self.scaler.transform(p)  # Transform preidcted value with error to range <0, 1>
                 input_set = np.append(input_set[:, 1:], pe)  # Modify dataset, add predicted value to dataset
                 input_set = np.reshape(input_set, (1, self.backword_days, self.number_of_features))
-                # input_set = input_set.reshape(1, self.backword_days, self.number_of_features)  # Update shape of dataset that model will preodict from
                 day += 1  # Increment iterator
             
             predictions = np.array(predictions).reshape(days, self.number_of_features)
@@ -299,7 +334,9 @@ class Predictor:
         self.model.add(Dropout(0.05))
         self.model.add(Dense(shape[1]))
 
-        self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy', tf.keras.metrics.RootMeanSquaredError()])
+        self.model.compile(optimizer='adam', 
+                           loss='mean_squared_error', 
+                           metrics=['accuracy', tf.keras.metrics.RootMeanSquaredError()])
         self.model.summary()
 
     def change_dataset(self, new_dataset: pd.DataFrame) -> None:
@@ -321,7 +358,8 @@ class Predictor:
     
     def download_dataset(self, START: str, END: str, company: str) -> pd.DataFrame:
         """
-            Description: Method downloads data do pandas DataFrame from https://finance.yahoo.com/. 
+            Description: Method downloads data do pandas DataFrame 
+                         from https://finance.yahoo.com/. 
                          
             Parameters
             ----------
@@ -344,9 +382,11 @@ class Predictor:
         dataset.reset_index(inplace=True)
         return dataset
 
-    def get_xy_sets(self, dataset: np.array, batch_size: int) -> Tuple[np.array, np.array]:
+    def get_xy_sets(self, dataset: np.array, batch_size: int) -> \
+        Tuple[np.array, np.array]:
         """
-            Description: Method splits test and train data into two sets of dependent and independent variables
+            Description: Method splits test and train data into 
+                         two sets of dependent and independent variables
 
             Parameters
             ----------
@@ -368,12 +408,14 @@ class Predictor:
                 y.append(dataset[i])
             return np.array(x), np.array(y)
         except Exception("Dataset too small"):
-            print("Your dataset size: {}\nMinimum dataset size reqired: {}".format(dataset_size, self.backword_days))
+            print("Your dataset size: {}\nMinimum dataset size reqired: {}"\
+                .format(dataset_size, self.backword_days))
             return None, None
     
     def get_dates(self, beginning: str, days_forword: int) -> list:
         """
-            Description: Generates list of dates for given number of days from beginning date ommiting holidays and weekends
+            Description: Generates list of dates for given number of days 
+                         from beginning date ommiting holidays and weekends
 
             Parameters
             ----------
@@ -396,18 +438,23 @@ class Predictor:
 
     def display_info(self, error_boxplot: bool=False) -> None:
         """
-            Description: Method displays information about model such as: training time, RMSE for each feature, error distribution
+            Description: Method displays information about model such as: 
+                         training time, RMSE for each feature, error distribution
 
             Parameters
             ----------
                 error_boxplot : bool
-                    parameter that decide wether to display or not error distribution boxplots for each feature
+                    parameter that decide wether to display or not 
+                    error distribution boxplots for each feature
         """
         print("\n\tINFO:\n")
-        if self.first_training_time is not None: print("First training time: {:.5f}s".format(self.first_training_time))
-        if self.final_training_time is not None: print("Final training time: {:.5f}s".format(self.final_training_time))
-        if self.total_training_time is not None:
-            print("Total training time: {:.2f} minutes ({:.3f}s)".format(self.total_training_time/60, self.total_training_time))
+        if self.first_training_time: 
+            print("First training time: {:.5f}s".format(self.first_training_time))
+        if self.final_training_time: 
+            print("Final training time: {:.5f}s".format(self.final_training_time))
+        if self.total_training_time:
+            print("Total training time: {:.2f} minutes ({:.3f}s)"\
+                .format(self.total_training_time/60, self.total_training_time))
 
         print("\nRMSE for each feature:\n", self.rmse)
         print("Lowest RMSE feature: {}".format(self.rmse[['RMSE [%]']].idxmin()[0]))
@@ -438,7 +485,8 @@ class Predictor:
 
             to_plot = self.one_by_one_df.set_index("Date")
             fig = plt.figure(figsize=(16,8))
-            fig.canvas.set_window_title("{} predictions for next {} days".format(company_name, forword_days))
+            fig.canvas.set_window_title("{} predictions for next {} days"\
+                .format(company_name, forword_days))
             ax = sb.lineplot(data=to_plot[[feature]], marker="o")
             ax.set_xticklabels(to_plot.index, rotation=20)
             ax.set(xticks=to_plot.index)
@@ -450,19 +498,23 @@ class Predictor:
 
             for x, y in zip(to_plot.index, to_plot[[feature]].values):
                 label = "{:.2f}".format(y[0])
-                plt.annotate(label, (x,y), textcoords="offset points", xytext=(0,10), ha='center')
+                plt.annotate(label, (x,y), textcoords="offset points", 
+                             xytext=(0,10), ha='center')
 
             plt.show()
         else:
             print("\nERROR\n----------------------------------------")
-            print("Your feature: {} | Availabe features: {}".format(feature, list(self.one_by_one_df.columns)))
-            print("Your days forword: {} | Available days forword: {}\n".format(forword_days, self.one_by_one_df.shape[0]))
+            print("Your feature: {} | Availabe features: {}"\
+                .format(feature, list(self.one_by_one_df.columns)))
+            print("Your days forword: {} | Available days forword: {}\n"\
+                .format(forword_days, self.one_by_one_df.shape[0]))
 
     def compare_directions(self, predictions, valid_set, feature) -> dict:
         """
-            Description: This method perform simulation of correctly predicted direction of prices between days.
-                         You need a set of valid data that could be compared with predictions. 
-                         This is an accuracy measure function of out project.
+            Description: This method perform simulation of correctly predicted direction 
+                         of prices between days. You need a set of valid data that could 
+                         be compared with predictions. This is an accuracy measure 
+                         function of out project.
             
             Parameters
             ----------
