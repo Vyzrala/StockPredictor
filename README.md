@@ -7,5 +7,5 @@ Installable package and manual are in *.zip file under 'StockPredictorLSTM/distr
 #### Package creation tutorials:
     1. https://betterscientificsoftware.github.io/python-for-hpc/tutorials/python-pypi-packaging/
     2. https://pythonhosted.org/an_example_pypi_project/setuptools.html
-
+    3. https://packaging.python.org/guides/distributing-packages-using-setuptools/
 

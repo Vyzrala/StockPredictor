@@ -6,7 +6,7 @@ with open('README.md', 'r') as ld:
 
 setuptools.setup(
     name="StockPredictorLSTM",
-    version="0.1.7",
+    version="0.1.9",
     description="Thesis project",
     long_description=long_description,
     author="Marcin Hebdzynski",
@@ -24,7 +24,9 @@ setuptools.setup(
         'Keras>=2.4.3',
         'scipy>=1.4.1',
         'pandas-datareader>=0.9.0',
-        'holidays>=0.10.3'
+        'holidays>=0.10.3',
+        'scikit-learn>=0.23',
+        'scipy>=1.5.4',
     ],
     package_dir = {":":"StockPredictorLSTM"},
 )
