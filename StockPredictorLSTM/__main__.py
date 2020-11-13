@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from StockPredictorLSTM import Predictor
 import datetime
 

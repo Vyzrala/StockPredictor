@@ -8,15 +8,16 @@ import numpy as np
 import pandas as pd
 import seaborn as sb
 from scipy import stats
+import tensorflow as tf
 from typing import Tuple
 from matplotlib import dates
+from keras import regularizers
 import matplotlib.pyplot as plt
 import pandas_datareader as pdr
-from keras import regularizers
+from sklearn.utils import validation
 from keras.layers import Dense, LSTM, Dropout
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, load_model
-from sklearn.utils import validation
 from tensorflow.python.keras.optimizers import Optimizer
 
 class Predictor:
@@ -181,7 +182,8 @@ class Predictor:
                 p += random.choice(self.error_distribution * self.error_impact)  # Add random error value to predicted value
                 pe = self.scaler.transform(p)  # Transform preidcted value with error to range <0, 1>
                 input_set = np.append(input_set[:, 1:], pe)  # Modify dataset, add predicted value to dataset
-                input_set = input_set.reshape(1, self.backword_days, self.number_of_features)  # Update shape of dataset that model will preodict from
+                input_set = np.reshape(input_set, (1, self.backword_days, self.number_of_features))
+                # input_set = input_set.reshape(1, self.backword_days, self.number_of_features)  # Update shape of dataset that model will preodict from
                 day += 1  # Increment iterator
             
             predictions = np.array(predictions).reshape(days, self.number_of_features)
@@ -224,7 +226,8 @@ class Predictor:
             self.raw_dataset = metrics.get('raw_dataset', None)
             self.total_training_time = metrics.get('total_training_time', None)
             del metrics
-            self.model = load_model(folder_path+"/model.h5")
+            path = folder_path+"/model.h5"
+            self.model = load_model(path)
             self.model.compile(optimizer='adam', loss='mean_squared_error')
             print("Model summary:\n", self.model.summary())
             
@@ -296,7 +299,7 @@ class Predictor:
         self.model.add(Dropout(0.05))
         self.model.add(Dense(shape[1]))
 
-        self.model.compile(optimizer='adam', loss='mean_squared_error')
+        self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy', tf.keras.metrics.RootMeanSquaredError()])
         self.model.summary()
 
     def change_dataset(self, new_dataset: pd.DataFrame) -> None:
@@ -316,7 +319,7 @@ class Predictor:
             print("Fail to change dataset")
             return False
     
-    def download_dataset(self, beginning_date: str, end_date: str, company: str) -> pd.DataFrame:
+    def download_dataset(self, START: str, END: str, company: str) -> pd.DataFrame:
         """
             Description: Method downloads data do pandas DataFrame from https://finance.yahoo.com/. 
                          
@@ -337,7 +340,7 @@ class Predictor:
         """
 
         source = 'yahoo'
-        dataset = pdr.DataReader(company, source, beginning_date, end_date)
+        dataset = pdr.DataReader(company, source, START, END)
         dataset.reset_index(inplace=True)
         return dataset
 
