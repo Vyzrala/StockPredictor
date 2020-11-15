@@ -1,20 +1,23 @@
-from os import curdir
-from typing import List, Tuple, Dict
+from typing import Dict
 import pandas as pd
-import numpy as np
-import glob, sys, os, logging, datetime, re, copy
+import glob, os, logging, datetime, re, copy
 import pandas_datareader as pdr
 from textblob import TextBlob
 from pathlib import Path
 
 settings = {
-		'format': '%(acstime)s | %(levelname)s | %(message)s',
-		'log_file': os.getcwd() + '/NLP/tools.log',
+    'format': '%(asctime)s | %(levelname)s | %(funcName)s | %(lineno)s | %(message)s',
+    'log_file': '/tools.log',
+    'log_folder': os.getcwd() + '/NLP' 
 }
-# Path(settings['log_file']).mkdir(parents=True, exist_ok=True)
-# logging.basicConfig(filename=settings['log_file'],
-# 					level=logging.INFO,
-# 					format=settings['format'])
+Path(settings['log_folder']).mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    filename=settings['log_folder'] + settings['log_file'], 
+    filemode='a',
+    format=settings['format'],
+    level=logging.INFO
+)
+
 
 companies_keywords = {
 	'AAPL': [' Apple ','Iphone','MacOS','Ipod','Ipad','AirPods','HomePod',
@@ -40,12 +43,12 @@ def preprocess_raw_datasets(input_folder_path: str, output_folder_path: str) -> 
     grouped_datasets = group_datasets(files_names)
     combined_datasets = combine_datasets(grouped_datasets)
     
-    # output_path = '/'+output_folder_path
-    # Path(output_path).mkdir(parents=True, exist_ok=True)
+    output_path = os.getcwd() + '/'+output_folder_path
+    Path(output_path).mkdir(parents=True, exist_ok=True)
     
-    # # Saving to file
-    # for k, v in combined_datasets.items():
-    #     v.to_csv(output_path+'/'+k+'.csv', index=False)
+    # Saving to file
+    for k, v in combined_datasets.items():
+        v.to_csv(output_path+'/'+k+'.csv', index=False)
     
 def group_datasets(files_names: list) -> dict:
     combined_dfs = {}
@@ -70,8 +73,8 @@ def group_datasets(files_names: list) -> dict:
         v.Likes = pd.to_numeric(v.Likes)
         v.Shares = pd.to_numeric(v.Shares)
         v.sort_values(by='Date', inplace=True)
-        # msg = ' - {} = {}'.format(k, v.shape)
-        # logging.info(msg)
+        msg = '- {} = {}'.format(k, v.shape)
+        logging.info(msg)
                 
     return combined_dfs
     
@@ -100,8 +103,8 @@ def combine_datasets(grouped_datasets: Dict[str, pd.DataFrame]) -> dict:
         
         stock_data = pdr.DataReader(company_name, 'yahoo', start, end)
         result_ds = pd.concat([stock_data, by_day], join='inner', axis=1)
-        # msg = ' - {}:\tshape = {}'.format(company_name, result_ds.shape)
-        # logging.info(msg)
+        msg = ' - {}:\tshape = {}'.format(company_name, result_ds.shape)
+        logging.info(msg)
         combined_datasets[company_name] = result_ds
   
     del grouped_datasets
