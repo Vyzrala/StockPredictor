@@ -20,7 +20,7 @@ from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential, load_model
 from tensorflow.python.keras.optimizers import Optimizer
 
-class Predictor:
+class PredictorLSTM:
     """
         This is a thesis projects for bechelor degree at Gdańsk University of technology in Poland.
         The Predictor class provides all nessecery methods and functionality 

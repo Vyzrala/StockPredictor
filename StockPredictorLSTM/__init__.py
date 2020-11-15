@@ -1,4 +1,4 @@
-from .StockPredictorLSTM import Predictor
+from .StockPredictorLSTM import PredictorLSTM
 
 # Running:
 # 
