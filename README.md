@@ -49,11 +49,4 @@ predictor.prediction_plot(forecasted_value_name, company, days_forword)
 
 ```
 <!---
-# Credits
 
-Creators:
-> Witold Bazela  
-> Patryk Dunajewski  
-> Marcin Hebdzyński  
-> Kamil Rutkowski
---->
