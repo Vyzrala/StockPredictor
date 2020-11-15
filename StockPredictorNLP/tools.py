@@ -1,3 +1,4 @@
+from os import curdir
 from typing import List
 import pandas as pd
 import numpy as np
@@ -36,11 +37,44 @@ companies_keywords = {
 
 def preprocess_raw_datasets(folder_path: str, output_path) -> None:
     files_names = glob.glob(folder_path+'/*.csv')
-    combined_dfs = None
+    grouped_datasets = group_datasets(files_names)
+    # print(grouped_datasets['AAPL'])
     
+	
+
+def group_datasets(files_names: list) -> dict:
+    combined_dfs = {}
+    columns = ['Text', 'Date', 'Nick', 'Shares', 'Likes']
+    
+    # Filtering by keywords for each company
+    for filename in files_names:
+        tmp_df = pd.read_csv(filename)
+        tmp_df.drop(columns=['Id'], inplace=True)
+        for company, keywords in companies_keywords.items():
+            tmp_mask = tmp_df.Text.apply(lambda content: create_mask(content, keywords))
+            filtered = tmp_df[tmp_mask]
+            
+            current = combined_dfs.get(company, pd.DataFrame(columns=columns))
+            combined_dfs[company] = pd.concat([current, filtered], ignore_index=True)
+            del tmp_mask, current, filtered
+        del tmp_df
+    
+    for k, v in combined_dfs.items():
+        v.Text = v.Text.apply(lambda x: " ".join(re.sub("([^0-9A-Za-z \t])|(\w+://\S+)", "", x).split()))
+        v.Date = v.Date.apply(lambda x: pd.to_datetime(x.split(' ')[0]))
+        v.sort_values(by='Date', inplace=True)
+        # msg = ' - {} = {}'.format(k, v.shape)
+        # logging.info(msg)
+                
+    return combined_dfs
     
 
 def create_mask(content: str, keywords: list) -> bool:
 	content_ = content.lower()
 	keywords_ = [kw.lower() for kw in keywords]
 	return any(item for item in keywords_ if item in content_)
+
+
+def combine_datasets(grouped_companies: dict) -> dict:
+    
+    pass
