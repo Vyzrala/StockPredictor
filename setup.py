@@ -5,15 +5,15 @@ with open('README.md', 'r') as ld:
     long_description = ld.read()
 
 setuptools.setup(
-    name="StockPredictorLSTM",
+    name="StockPredictor",
     version="0.3.0",
     description="Thesis project",
     long_description=long_description,
     author="Marcin Hebdzynski",
     author_email="hebdzynski.m@gmail.com",
-    license='MIT License',
-    url="https://github.com/Vyzrala/StockPredictorLSTM",
-    packages=["StockPredictorLSTM", "StockPredictorNLP"], #setuptools.find_packages(include=["StockPredictorLSTM", "StockPredictorLSTM.*"], exclude=["tests"], where="StockPredictorLSTM"),
+    license='MIT',
+    url="https://github.com/Vyzrala/StockPredictor",
+    packages=setuptools.find_packages(exclude=['tests']),
     python_requires=">=3.7",
     install_requires=[
         'pandas>=1.1.1',
@@ -27,6 +27,6 @@ setuptools.setup(
         'holidays>=0.10.3',
         'scikit-learn>=0.23',
         'scipy>=1.4.1',
+        'textblob>=0.15.3',
     ],
-    package_dir = {":":"StockPredictorLSTM"},
 )
