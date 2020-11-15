@@ -13,7 +13,7 @@ setuptools.setup(
     author_email="hebdzynski.m@gmail.com",
     license='MIT License',
     url="https://github.com/Vyzrala/StockPredictorLSTM",
-    packages=["StockPredictorLSTM"], #setuptools.find_packages(include=["StockPredictorLSTM", "StockPredictorLSTM.*"], exclude=["tests"], where="StockPredictorLSTM"),
+    packages=["StockPredictorLSTM", "StockPredictorNLP"], #setuptools.find_packages(include=["StockPredictorLSTM", "StockPredictorLSTM.*"], exclude=["tests"], where="StockPredictorLSTM"),
     python_requires=">=3.7",
     install_requires=[
         'pandas>=1.1.1',
