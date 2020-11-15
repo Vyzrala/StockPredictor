@@ -6,7 +6,7 @@ from StockPredictorNLP.tools import preprocess_raw_datasets
 
 def main():
     path = '/media/marcin/DANE/Programing projects/Thesis datasets'
-    preprocess_raw_datasets(path, '')
+    preprocess_raw_datasets(path, '/Data')
 
 
 if __name__ == '__main__':

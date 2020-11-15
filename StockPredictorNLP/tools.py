@@ -1,5 +1,5 @@
 from os import curdir
-from typing import List
+from typing import List, Tuple, Dict
 import pandas as pd
 import numpy as np
 import glob, sys, os, logging, datetime, re, copy
@@ -35,13 +35,18 @@ companies_keywords = {
 			 'Youtube',' YT ','TensorFlow','Android','Nexus'],
 }
 
-def preprocess_raw_datasets(folder_path: str, output_path) -> None:
-    files_names = glob.glob(folder_path+'/*.csv')
+def preprocess_raw_datasets(input_folder_path: str, output_folder_path: str) -> None:
+    files_names = glob.glob(input_folder_path+'/*.csv')
     grouped_datasets = group_datasets(files_names)
-    # print(grouped_datasets['AAPL'])
+    combined_datasets = combine_datasets(grouped_datasets)
     
-	
-
+    # output_path = '/'+output_folder_path
+    # Path(output_path).mkdir(parents=True, exist_ok=True)
+    
+    # # Saving to file
+    # for k, v in combined_datasets.items():
+    #     v.to_csv(output_path+'/'+k+'.csv', index=False)
+    
 def group_datasets(files_names: list) -> dict:
     combined_dfs = {}
     columns = ['Text', 'Date', 'Nick', 'Shares', 'Likes']
@@ -61,7 +66,9 @@ def group_datasets(files_names: list) -> dict:
     
     for k, v in combined_dfs.items():
         v.Text = v.Text.apply(lambda x: " ".join(re.sub("([^0-9A-Za-z \t])|(\w+://\S+)", "", x).split()))
-        v.Date = v.Date.apply(lambda x: pd.to_datetime(x.split(' ')[0]))
+        v.Date = v.Date.apply(lambda x: x.split(' ')[0])
+        v.Likes = pd.to_numeric(v.Likes)
+        v.Shares = pd.to_numeric(v.Shares)
         v.sort_values(by='Date', inplace=True)
         # msg = ' - {} = {}'.format(k, v.shape)
         # logging.info(msg)
@@ -75,6 +82,43 @@ def create_mask(content: str, keywords: list) -> bool:
 	return any(item for item in keywords_ if item in content_)
 
 
-def combine_datasets(grouped_companies: dict) -> dict:
+def combine_datasets(grouped_datasets: Dict[str, pd.DataFrame]) -> dict:
+    combined_datasets = {}
+    for company_name, dataset in grouped_datasets.items():
+        tmp_df = copy.deepcopy(dataset)
+        tmp_df = tmp_df[tmp_df.Date >= '2020-07-14']
+        tmp_df['Polarity'] = tmp_df.Text.apply(lambda content: TextBlob(content).polarity)
+        tmp_df['Subjectivity'] = tmp_df.Text.apply(lambda content: TextBlob(content).subjectivity)
+        tmp_df.drop(columns=['Text', 'Nick'], inplace=True)
+        
+        by_day = tmp_df.groupby(by='Date').mean()
+        by_day.index = pd.to_datetime(by_day.index)
+        by_day = combine_fridays(by_day)
+        
+        start = str(by_day.index[0])
+        end = str(by_day.index[-1])
+        
+        stock_data = pdr.DataReader(company_name, 'yahoo', start, end)
+        result_ds = pd.concat([stock_data, by_day], join='inner', axis=1)
+        # msg = ' - {}:\tshape = {}'.format(company_name, result_ds.shape)
+        # logging.info(msg)
+        combined_datasets[company_name] = result_ds
+  
+    del grouped_datasets
+    return combined_datasets
+
+def combine_fridays(grouped_dataset: pd.DataFrame) -> pd.DataFrame:
+    for day in grouped_dataset.index:
+        if day.weekday() == 4:  # is friday
+            to_mean = [day,]
+            saturday = day + datetime.timedelta(days=1)
+            sunday = day + datetime.timedelta(days=2)
+            if saturday in grouped_dataset.index:
+                to_mean.append(saturday)
+            if sunday in grouped_dataset.index:
+                to_mean.append(sunday)
+            
+            grouped_dataset.loc[day] = pd.DataFrame([grouped_dataset.loc[idx] for idx in to_mean]).mean()
+            grouped_dataset.drop(index=to_mean[1:], inplace=True)
     
-    pass
+    return grouped_dataset
