@@ -5,6 +5,7 @@ import pandas_datareader as pdr
 from textblob import TextBlob
 from pathlib import Path
 
+
 settings = {
     'format': '%(asctime)s | %(levelname)s | %(funcName)s | %(lineno)s | %(message)s',
     'log_file': '/tools.log',
@@ -38,24 +39,24 @@ companies_keywords = {
 			 'Youtube',' YT ','TensorFlow','Android','Nexus'],
 }
 
-def preprocess_raw_datasets(input_folder_path: str, output_folder_path: str) -> None:
-    print('Pre-processing start...')
-    files_names = glob.glob(input_folder_path+'/*.csv')
+def preprocess_raw_datasets(input_folder_abs_path: str, output_folder_relative_path: str) -> Dict[str, pd.DataFrame]:
+    print('-> Pre-processing start...')
+    files_names = glob.glob(input_folder_abs_path+'/*.csv')
     grouped_datasets = group_filter_files(files_names)
-    combined_datasets = sentiment_stock_combination(grouped_datasets)
+    combined_datasets = sentiment_stock_combine(grouped_datasets)
     
-    output_path = os.getcwd() + '/'+output_folder_path
+    output_path = os.getcwd() + '/'+output_folder_relative_path
     Path(output_path).mkdir(parents=True, exist_ok=True)
     
     # Saving to file
     for k, v in combined_datasets.items():
         v.to_csv(output_path+'/'+k+'.csv', index=False)
         
-    print("Saved in", output_path)
-    return 
+    print("-> Saved in", output_path)
+    return combined_datasets
     
 def group_filter_files(files_names: list) -> dict:
-    print("Grouping datasets...")
+    print("-> Filtering and grouping files...")
     combined_dfs = {}
     columns = ['Text', 'Date', 'Nick', 'Shares', 'Likes']
     
@@ -90,8 +91,8 @@ def create_mask(content: str, keywords: list) -> bool:
 	return any(item for item in keywords_ if item in content_)
 
 
-def sentiment_stock_combination(grouped_datasets: Dict[str, pd.DataFrame]) -> dict:
-    print('Combining datasetes...')
+def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> dict:
+    print('-> Sentiment and stock combining...')
     combined_datasets = {}
     for company_name, dataset in grouped_datasets.items():
         tmp_df = copy.deepcopy(dataset)
