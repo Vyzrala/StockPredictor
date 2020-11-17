@@ -40,7 +40,7 @@ companies_keywords = {
 
 def preprocess_raw_datasets(input_folder_path: str, output_folder_path: str) -> None:
     print('Pre-processing start...')
-    files_names = glob.glob(os.getcwd() + '/' + input_folder_path+'/*.csv')
+    files_names = glob.glob(input_folder_path+'/*.csv')
     grouped_datasets = group_datasets(files_names)
     combined_datasets = combine_datasets(grouped_datasets)
     
@@ -52,6 +52,7 @@ def preprocess_raw_datasets(input_folder_path: str, output_folder_path: str) -> 
         v.to_csv(output_path+'/'+k+'.csv', index=False)
         
     print("Saved in", output_path)
+    return 
     
 def group_datasets(files_names: list) -> dict:
     print("Grouping datasets...")
@@ -108,6 +109,7 @@ def combine_datasets(grouped_datasets: Dict[str, pd.DataFrame]) -> dict:
         
         stock_data = pdr.DataReader(company_name, 'yahoo', start, end)
         result_ds = pd.concat([stock_data, by_day], join='inner', axis=1)
+        result_ds.reset_index(inplace=True)
         msg = ' - {}:\tshape = {}'.format(company_name, result_ds.shape)
         logging.info(msg)
         combined_datasets[company_name] = result_ds
