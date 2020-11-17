@@ -22,11 +22,15 @@ class PredictorNLP:
         self.epochs_number = epochs_number
         self.raw_dataset = None
         self.model = None
+        self.models = {}
+        self.best_model_stuff = {}
         self.rmse = 0
         self.last_prediction = 0
     
     def create_model(self, dataset: pd.DataFrame):
         self.raw_dataset = dataset.copy()
+        
+        # Process dataset
         dfa = np.array(dataset[self.features].copy())
         split_index = int(len(dfa) * self.split_ratio)
         train_set = dfa[:split_index, :].copy()
@@ -36,13 +40,36 @@ class PredictorNLP:
         test_scaled = self.scaler.transform(test_set)
         x_train, y_train = self.get_xy_sets(train_scaled)
         x_test, y_test = self.get_xy_sets(test_scaled)
-        shape = (x_train.shape[1], x_train.shape[0])
+        print(x_train.shape)
+        shape = (x_train.shape[1], x_train.shape[2])
         
         # create models
-        
+        models = {}
+        for layer in self.layers:
+            tmp_model = self.initialize_model(layer, shape)
+            tmp_history = tmp_model.fit(x_train, y_train, 
+                                epochs=self.epochs_number, 
+                                batch_size=1, 
+                                validation_split=.05)
+            tmp_predictions = tmp_model.predict(x_test)
+            unscaled_predictions = ((tmp_predictions.flatten() - self.scaler.min_[0]) 
+                                    / self.scaler.scale_[0])
+            unscaled_y_test = ((y_test.flatten() - self.scaler.min_[0]) 
+                               / self.scaler.scale_[0])
+            tmp_rmse = np.sqrt(mean_squared_error(unscaled_y_test, unscaled_predictions))
+            print("\n{}: RMSE = {}\n".format(str(layer).split('.')[-1][:-2], tmp_rmse))
+            models[layer] = {'model': tmp_model, 
+                             'history': tmp_history, 
+                             'predictions': unscaled_predictions,
+                             'rmse':tmp_rmse,
+                             'layer':str(layer).split('.')[-1][:-2]}
+
         # select best model
+        self.models = models
+        best_model_stuff = min(models.values(), key=lambda x: x['rmse'])
+        print(best_model_stuff)
         
-        #         
+        # Final training
     
     def predict(self):
         pass
@@ -64,8 +91,8 @@ class PredictorNLP:
     def get_xy_sets(self, dataset: np.array) -> Tuple[np.array, np.array]:
         x, y = [], []
         for i in range(len(dataset)-1):
-            x.append(np.array(dataset[i, 1:]))
-            y.append(np.array(dataset[i+1, 0]))
+            x.append(np.array([dataset[i, 1:]]))
+            y.append(np.array([dataset[i+1, 0]]))
         
         return (np.array(x), np.array(y))
     
