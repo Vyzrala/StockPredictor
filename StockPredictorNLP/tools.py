@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 import pandas as pd
 import glob, os, logging, datetime, re, copy
 import pandas_datareader as pdr
@@ -55,7 +55,7 @@ def preprocess_raw_datasets(input_folder_abs_path: str, output_folder_relative_p
     print("-> Saved in", output_path)
     return combined_datasets
     
-def group_filter_files(files_names: list) -> dict:
+def group_filter_files(files_names: list) -> Dict[str, pd.DataFrame]:
     print("-> Filtering and grouping files...")
     combined_dfs = {}
     columns = ['Text', 'Date', 'Nick', 'Shares', 'Likes']
@@ -85,13 +85,13 @@ def group_filter_files(files_names: list) -> dict:
     return combined_dfs
     
 
-def create_mask(content: str, keywords: list) -> bool:
+def create_mask(content: str, keywords: List[str]) -> List[bool]:
 	content_ = content.lower()
 	keywords_ = [kw.lower() for kw in keywords]
 	return any(item for item in keywords_ if item in content_)
 
 
-def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> dict:
+def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
     print('-> Sentiment and stock combining...')
     combined_datasets = {}
     for company_name, dataset in grouped_datasets.items():
