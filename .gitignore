@@ -130,6 +130,4 @@ dmypy.json
 .pyre/
 
 DATA/
-test_data/
-tests_output/
 log/
