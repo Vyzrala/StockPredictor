@@ -199,7 +199,11 @@ class PredictorLSTM:
                 dataset with predicted values
 
         """
-        begin_date = str(self.raw_dataset.Date.iloc[-1].date() + datetime.timedelta(days=1))
+        try:
+            begin_date = str(self.raw_dataset.Date.iloc[-1].date() + datetime.timedelta(days=1))
+        except:
+            raise Exception('No dataset')
+            
 
         if not self.model:
             raise Exception("Model have not been initilized")
