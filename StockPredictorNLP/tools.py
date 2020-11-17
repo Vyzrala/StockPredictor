@@ -41,8 +41,8 @@ companies_keywords = {
 def preprocess_raw_datasets(input_folder_path: str, output_folder_path: str) -> None:
     print('Pre-processing start...')
     files_names = glob.glob(input_folder_path+'/*.csv')
-    grouped_datasets = group_datasets(files_names)
-    combined_datasets = combine_datasets(grouped_datasets)
+    grouped_datasets = group_filter_files(files_names)
+    combined_datasets = sentiment_stock_combination(grouped_datasets)
     
     output_path = os.getcwd() + '/'+output_folder_path
     Path(output_path).mkdir(parents=True, exist_ok=True)
@@ -54,7 +54,7 @@ def preprocess_raw_datasets(input_folder_path: str, output_folder_path: str) -> 
     print("Saved in", output_path)
     return 
     
-def group_datasets(files_names: list) -> dict:
+def group_filter_files(files_names: list) -> dict:
     print("Grouping datasets...")
     combined_dfs = {}
     columns = ['Text', 'Date', 'Nick', 'Shares', 'Likes']
@@ -90,7 +90,7 @@ def create_mask(content: str, keywords: list) -> bool:
 	return any(item for item in keywords_ if item in content_)
 
 
-def combine_datasets(grouped_datasets: Dict[str, pd.DataFrame]) -> dict:
+def sentiment_stock_combination(grouped_datasets: Dict[str, pd.DataFrame]) -> dict:
     print('Combining datasetes...')
     combined_datasets = {}
     for company_name, dataset in grouped_datasets.items():
