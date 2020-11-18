@@ -14,10 +14,3 @@ class TestStockPredictorNLP(unittest.TestCase):
             StockPredictor/tests/test_data/2020.11.15_BFFMT.csv'
         result = self.predictor.get_data_from_file(file_path)
         self.assertIsInstance(result, pd.DataFrame)  # Check if result is corrent type
-        
-    def test_similation(self):
-        path = '/home/marcin/Documents/python_projects/StockTest/data/AAPL.csv'
-        predictor = PredictorNLP()
-        
-        dataset = predictor.get_data_from_file(path)
-        predictor.create_model(dataset)
