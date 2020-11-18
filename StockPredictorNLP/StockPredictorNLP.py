@@ -26,7 +26,7 @@ class PredictorNLP:
         self.models = {}
         self.best_model_stuff = {}
         self.rmse = 0
-        self.last_prediction = 0
+        self.prediction = 0
     
     def create_model(self, dataset: pd.DataFrame) -> None:
         self.raw_dataset = dataset.copy()
@@ -86,8 +86,33 @@ class PredictorNLP:
         self.best_model_data = best_model_stuff
         print('\nBest model ({}) has been fully trained.'.format(best_model_stuff['layer']))
     
-    def predict(self) -> float:
-        pass
+    def predict(self) -> tuple:
+        if not self.model:
+            raise NLPError("Model has not been initialized.")
+        if ((not self.raw_dataset) and 
+            (not isinstance(self.raw_dataset, pd.DataFrame))):
+            raise NLPError('No dataset or incorrect dataset type')
+        try:
+            last_row = self.raw_dataset.iloc[-1]
+            last_date = last_row['Date']
+            
+            input_values = np.array(last_row[self.features])
+            input_values = input_values.reshape(1, len(self.features))  # (1, 5)
+            input_values = self.scaler.transform(input_values)
+            input_values = input_values[:, 1:].reshape(1, 1, len(self.features)-1)  # (1, 1, 4)
+                
+            pred = self.model.predict(input_values)
+            pred = ((pred.flatten() - self.scaler.min_[0]) / self.scaler.scale_[0])[0]
+
+            next_day = pd.to_datetime(last_date)
+            while next_day.weekday() <= 4:
+                next_day += datetime.timedelta(days=1)
+            
+            self.prediction = pd.DataFrame([[next_day, pred]], columns=['Date', 'Open'])
+            self.prediction.Date = pd.to_datetime(self.prediction.Date)
+            return self.prediction
+        except:
+            raise NLPError('ERROR')
     
     def save_model(self, path: str) -> bool:
         pass
