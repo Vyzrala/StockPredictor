@@ -8,8 +8,8 @@ from pathlib import Path
 
 settings = {
     'format': '%(asctime)s | %(levelname)s | %(funcName)s | %(lineno)s | %(message)s',
-    'log_file': '/pre_processing.log',
-    'log_folder': os.getcwd(),
+    'log_file': '/tools.log',
+    'log_folder': os.getcwd()+'/log',
 }
 Path(settings['log_folder']).mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
