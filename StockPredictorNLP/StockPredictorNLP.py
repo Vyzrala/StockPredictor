@@ -21,8 +21,9 @@ class PredictorNLP:
         self.split_ratio = split_ratio
         self.epochs_number = epochs_number
         self.batch_size = batch_size
-        self.raw_dataset = None
+        self.raw_dataset = pd.DataFrame()
         self.model = None
+        self.company_name = None
         self.models = {}
         self.best_model_stuff = {}
         self.rmse = 0
@@ -86,15 +87,14 @@ class PredictorNLP:
         self.best_model_data = best_model_stuff
         print('\nBest model ({}) has been fully trained.'.format(best_model_stuff['layer']))
     
-    def predict(self) -> tuple:
+    def predict(self) -> pd.DataFrame:
         if not self.model:
             raise NLPError("Model has not been initialized.")
-        if ((not self.raw_dataset) and 
+        if ((not self.raw_dataset.empty) and 
             (not isinstance(self.raw_dataset, pd.DataFrame))):
             raise NLPError('No dataset or incorrect dataset type')
         try:
             last_row = self.raw_dataset.iloc[-1]
-            last_date = last_row['Date']
             
             input_values = np.array(last_row[self.features])
             input_values = input_values.reshape(1, len(self.features))  # (1, 5)
@@ -104,15 +104,15 @@ class PredictorNLP:
             pred = self.model.predict(input_values)
             pred = ((pred.flatten() - self.scaler.min_[0]) / self.scaler.scale_[0])[0]
 
-            next_day = pd.to_datetime(last_date)
-            while next_day.weekday() <= 4:
+            next_day = pd.to_datetime(last_row['Date']) + datetime.timedelta(days=1)
+            while next_day.weekday() > 4:
                 next_day += datetime.timedelta(days=1)
             
             self.prediction = pd.DataFrame([[next_day, pred]], columns=['Date', 'Open'])
             self.prediction.Date = pd.to_datetime(self.prediction.Date)
             return self.prediction
         except:
-            raise NLPError('ERROR')
+            raise NLPError('Error while predicting.')
     
     def save_model(self, path: str) -> bool:
         pass
@@ -121,10 +121,13 @@ class PredictorNLP:
         pass
 
     def get_data_from_file(self, path_to_file: str) -> pd.DataFrame:
-        dataset = None
         if os.path.isfile(path_to_file):
-            dataset = pd.read_csv(path_to_file)  
-            return dataset          
+            dataset = pd.read_csv(path_to_file) 
+            if all(feat in dataset.columns for feat in self.features):
+                self.company_name = path_to_file.split('/')[-1].split('.')[0]
+                return dataset          
+            else:
+                raise NLPError('Wrong dataset.')
         else:
             raise NLPError('\nNo such file.\nPlease check if file exists at {}.'.format(path_to_file))
     

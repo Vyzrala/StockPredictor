@@ -45,7 +45,36 @@ predictor.prediction_plot(forecasted_value_name, company, days_forword)
 
 ```
 from StockPredictorNLP import PredictorNLP
+from StockPredictorNLP.tools import preprocess_raw_datasets
 
-TODO: 
+
+# When you want to pre-process raw dataset first and then get predictions from that dataset
+company_name = 'AAPL'
+datasets_folder_path = 'L:/example/path'
+preprocessed_files_folder_name = 'Pre-processed data'
+predictor = PredictorNLP()
+
+# Get preprocessed datasets
+datasets_dict, abs_output_path = preprocess_raw_datasets(datasets_folder_path, preprocessed_files_folder_name)
+
+# If you do not want to read preprocessed data from file and just insert dataset into Predictor classes
+predictor.create_model(datasets_dict[company_name])
+prediction = predictor.predict() 
+
+
+# If you want to specify path to dataset there are 2 approaches:
+# 1 (More automative approach)
+company_dataset_file_path = abs_output_path+'/'+company_name+'.csv'
+# or 2 (Just provide absolute path, this is good when you already have preprocessed data) 
+company_dataset_file_path = ' D:/Programing projects/StockPredictor/Pre-processed data/AAPL.csv'
+#  - Those paths are the same 
+dataset = predictor.get_data_from_file(company_dataset_file_path)
+# Disclimer: those datasets are the same: dataset[company_name] == dataset
+
+# Then just
+predictor.create_model(dataset)
+prediction = predictor.predict() 
+
+
 ```
 

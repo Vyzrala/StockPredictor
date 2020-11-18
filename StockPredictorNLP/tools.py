@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import pandas as pd
 import glob, os, logging, datetime, re, copy
 import pandas_datareader as pdr
@@ -39,13 +39,20 @@ companies_keywords = {
 			 'Youtube',' YT ','TensorFlow','Android','Nexus'],
 }
 
-def preprocess_raw_datasets(input_folder_abs_path: str, output_folder_relative_path: str) -> Dict[str, pd.DataFrame]:
+def preprocess_raw_datasets(input_folder_abs_path: str, 
+                            output_folder_relative_path: str) -> \
+                                Tuple[Dict[str, pd.DataFrame], str]:
     print('-> Pre-processing start...')
-    files_names = glob.glob(input_folder_abs_path+'/*.csv')
+    input_folder_abs_path += '/'
+    input_folder_abs_path = input_folder_abs_path.replace('\\', '/')
+    input_folder_abs_path = input_folder_abs_path.replace('//', '/')
+    
+    files_names = glob.glob(input_folder_abs_path+'*.csv')
     grouped_datasets = group_filter_files(files_names)
     combined_datasets = sentiment_stock_combine(grouped_datasets)
     
     output_path = os.getcwd() + '/'+output_folder_relative_path
+    output_path = output_path.replace('\\', '/')
     Path(output_path).mkdir(parents=True, exist_ok=True)
     
     # Saving to file
@@ -53,7 +60,7 @@ def preprocess_raw_datasets(input_folder_abs_path: str, output_folder_relative_p
         v.to_csv(output_path+'/'+k+'.csv', index=False)
         
     print("-> Saved in", output_path)
-    return combined_datasets
+    return combined_datasets, output_path
     
 def group_filter_files(files_names: list) -> Dict[str, pd.DataFrame]:
     print("-> Filtering and grouping files...")
