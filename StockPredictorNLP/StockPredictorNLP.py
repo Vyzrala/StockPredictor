@@ -20,13 +20,13 @@ class PredictorNLP:
         self.features = ['Open', 'Close', 'Volume', 'Polarity', 'Subjectivity']
         self.split_ratio = split_ratio
         self.epochs_number = epochs_number
+        self.batch_size = batch_size
         self.raw_dataset = None
         self.model = None
         self.models = {}
         self.best_model_stuff = {}
         self.rmse = 0
         self.last_prediction = 0
-        self.batch_size = batch_size
     
     def create_model(self, dataset: pd.DataFrame) -> None:
         self.raw_dataset = dataset.copy()
@@ -41,9 +41,10 @@ class PredictorNLP:
         test_scaled = self.scaler.transform(test_set)
         x_train, y_train = self.get_xy_sets(train_scaled)
         x_test, y_test = self.get_xy_sets(test_scaled)
-        print(x_train.shape)
-        shape = (x_train.shape[1], x_train.shape[2])
         
+        shape = (x_train.shape[1], x_train.shape[2])
+        unscale = lambda x: ((x.flatten() - self.scaler.min_[0]) 
+                             / self.scaler.scale_[0])
         # create models
         models = {}
         for layer in self.layers:
@@ -53,11 +54,11 @@ class PredictorNLP:
                                         epochs=self.epochs_number, 
                                         batch_size=self.batch_size, 
                                         validation_split=.05)
+
             tmp_predictions = tmp_model.predict(x_test)
-            unscaled_predictions = ((tmp_predictions.flatten() - self.scaler.min_[0]) 
-                                    / self.scaler.scale_[0])
-            unscaled_y_test = ((y_test.flatten() - self.scaler.min_[0]) 
-                               / self.scaler.scale_[0])
+            unscaled_predictions = unscale(tmp_predictions)
+            unscaled_y_test = unscale(y_test)
+            
             tmp_rmse = np.sqrt(mean_squared_error(unscaled_y_test, unscaled_predictions))
             msg = '{}: RMSE = {}'.format(layer_name, tmp_rmse)
             print('\n\t', msg, '\n')
@@ -83,7 +84,7 @@ class PredictorNLP:
         self.model = model
         self.rmse = best_model_stuff['rmse']
         self.best_model_data = best_model_stuff
-        print("\nBest model ({}) has been fully trained.".format(best_model_stuff['layer']))
+        print('\nBest model ({}) has been fully trained.'.format(best_model_stuff['layer']))
     
     def predict(self) -> float:
         pass
@@ -110,7 +111,7 @@ class PredictorNLP:
         
         return (np.array(x), np.array(y))
     
-    def initialize_model(self, layer, shape, show_summary=False):
+    def initialize_model(self, layer, shape):
         tf.keras.backend.clear_session()
         model = Sequential()
         model.add(layer(50, activation='relu', return_sequences=True, input_shape=shape))
@@ -121,8 +122,6 @@ class PredictorNLP:
                       loss='mean_squared_error', 
                       metrics=['accuracy', 
                                tf.keras.metrics.RootMeanSquaredError()])
-        if show_summary: 
-            model.summary()
         return model
     
     def get_models_comparison_graph(self, data: Dict[str, dict]):

@@ -10,21 +10,21 @@ Degree: Bechelor
 # Instalation
 
 ```
-Windows: pip install StockPredictoLSTM-(version).tar.gz
-Linux: pip3 install StockPredictoLSTM-(version).tar.gz
+Windows: pip install StockPredictor-(version).tar.gz
+Linux: pip3 install StockPredictor-(version).tar.gz
 ```
 # Example usage
 
 ### For LSTM Predictor  
 ```
-from StockPredictorLSTM import Predictor
+from StockPredictorLSTM import PredictorLSTM
 
 company = 'AAPL'
 forecasted_value_name = 'Close'
 days_forword = 15
 start_date = '2015-01-01'
 end_date = '2020-01-01'
-predictor = Predictor()
+predictor = PredictorLSTM()
 
 # Initial use
 dataset = predictor.download_dataset(start_date, end_date, company)
@@ -44,6 +44,8 @@ predictor.prediction_plot(forecasted_value_name, company, days_forword)
 ### For NLP Predictor
 
 ```
+from StockPredictorNLP import PredictorNLP
+
 TODO: 
 ```
 
