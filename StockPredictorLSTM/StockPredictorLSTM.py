@@ -169,18 +169,18 @@ class PredictorLSTM:
         self.error_distribution = self.error_distribution[
             (np.abs(stats.zscore(self.error_distribution))<3).all(axis=1)]
         
-        # Final training
-        final_dataset = self.scaler.fit_transform(dataset)
-        final_x, final_y = self.get_xy_sets(final_dataset, self.backword_days)
-        print("\nFinal training:")
-        start_time = time.time()
-        self.model.fit(final_x, final_y, 
-                       epochs=self.epochs_number, 
-                       batch_size=self.batch, 
-                       validation_split=0.1)
-        self.final_training_time = time.time() - start_time
-        print("Final traning time: {:.2f} minutes ({:.3f}s)"\
-            .format(self.final_training_time/60, self.final_training_time))
+        # # Final training
+        # final_dataset = self.scaler.fit_transform(dataset)
+        # final_x, final_y = self.get_xy_sets(final_dataset, self.backword_days)
+        # print("\nFinal training:")
+        # start_time = time.time()
+        # self.model.fit(final_x, final_y, 
+        #                epochs=self.epochs_number, 
+        #                batch_size=self.batch, 
+        #                validation_split=0.1)
+        # self.final_training_time = time.time() - start_time
+        # print("Final traning time: {:.2f} minutes ({:.3f}s)"\
+        #     .format(self.final_training_time/60, self.final_training_time))
         self.total_training_time = self.final_training_time + self.first_training_time
 
     def predict(self, days: int) -> pd.DataFrame: 

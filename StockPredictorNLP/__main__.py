@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from StockPredictorNLP import PredictorNLP
-from StockPredictorNLP.tools import preprocess_raw_datasets
+from .tools import preprocess_raw_datasets
 
 
 def main():
@@ -10,6 +10,7 @@ def main():
     predictor.create_model(dataset)
     prediction = predictor.predict()   
     print(prediction)
+    predictor.get_models_comparison_graph()
     
 
 if __name__ == '__main__':

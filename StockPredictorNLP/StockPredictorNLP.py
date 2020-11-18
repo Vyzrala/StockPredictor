@@ -10,10 +10,9 @@ import pandas as pd
 import datetime, os
 import numpy as np
 
-
 class PredictorNLP:
-    def __init__(self, split_ratio: float=0.8, 
-                 epochs_number: int=10,
+    def __init__(self, epochs_number: int=10,
+                 split_ratio: float=0.8, 
                  batch_size: int=1) -> None:
         self.layers = [LSTM, GRU, SimpleRNN]
         self.scaler = MinMaxScaler(feature_range=(0, 1))
@@ -22,12 +21,13 @@ class PredictorNLP:
         self.epochs_number = epochs_number
         self.batch_size = batch_size
         self.raw_dataset = pd.DataFrame()
-        self.model = None
-        self.company_name = None
+        self.prediction = pd.DataFrame()
         self.models = {}
-        self.best_model_stuff = {}
+        self.best_model_data = {}
+        self.model = None
         self.rmse = 0
-        self.prediction = 0
+        self.company_name = None
+        self.y_test = None
     
     def create_model(self, dataset: pd.DataFrame) -> None:
         self.raw_dataset = dataset.copy()
@@ -46,6 +46,7 @@ class PredictorNLP:
         shape = (x_train.shape[1], x_train.shape[2])
         unscale = lambda x: ((x.flatten() - self.scaler.min_[0]) 
                              / self.scaler.scale_[0])
+        self.y_test = unscale(y_test)
         # create models
         models = {}
         for layer in self.layers:
@@ -70,8 +71,8 @@ class PredictorNLP:
                                   'predictions': unscaled_predictions}
 
         # Select best model by the lowest RMSE value
-        self.models = models
         best_model_stuff = min(models.values(), key=lambda x: x['rmse'])
+        self.models = models
         
         # Final training
         final_dataset = self.scaler.fit_transform(dfa)
@@ -81,6 +82,7 @@ class PredictorNLP:
                   epochs=self.epochs_number,
                   batch_size=self.batch_size,
                   validation_split=.05)
+        
         model.summary()
         self.model = model
         self.rmse = best_model_stuff['rmse']
@@ -121,6 +123,8 @@ class PredictorNLP:
         pass
 
     def get_data_from_file(self, path_to_file: str) -> pd.DataFrame:
+        path_to_file = path_to_file.replace('\\', '/')
+        path_to_file = path_to_file.replace('//', '/')
         if os.path.isfile(path_to_file):
             dataset = pd.read_csv(path_to_file) 
             if all(feat in dataset.columns for feat in self.features):
@@ -152,8 +156,28 @@ class PredictorNLP:
                                tf.keras.metrics.RootMeanSquaredError()])
         return model
     
-    def get_models_comparison_graph(self, data: Dict[str, dict]):
-        pass
-
+    def get_models_comparison_graph(self):
+        if not (self.models or self.best_model_data): 
+            raise NLPError('No models data tu display.')
+        
+        preds, names = [], []
+        for model_data in self.models.values():
+            preds.append(model_data['predictions'])
+            names.append(model_data['layer'])
+        
+        legend = ['Actual values'] + names
+        best_model_ = self.best_model_data['layer']
+        best_model_index = legend.index(best_model_)
+        legend[best_model_index] += ' (BEST)'
+        
+        plt.figure(figsize=(15, 8))            
+        sb.lineplot(data=self.y_test, linewidth=4,marker='o', color='blueviolet')  # valid
+        sb.lineplot(data=preds, marker='o')        
+        sb.color_palette('rocket')
+        plt.legend(legend)
+        plt.title(f'Models comparison on test data for {self.company_name}')
+        plt.xlabel('Days')
+        plt.ylabel('Open price [$]')
+        plt.show()
 
 class NLPError(Exception): pass
