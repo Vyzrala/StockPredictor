@@ -1,24 +1,22 @@
-import os
-import time
-import random
-import pickle
-import holidays
-import datetime
-import numpy as np
-import pandas as pd
-import seaborn as sb
-from scipy import stats
-import tensorflow as tf
-from typing import Tuple
-from matplotlib import dates
-from keras import regularizers
+from keras.models import Sequential, load_model
+from sklearn.preprocessing import MinMaxScaler
+from keras.layers import Dense, LSTM, Dropout
 import matplotlib.pyplot as plt
 import pandas_datareader as pdr
-from sklearn.utils import validation
-from keras.layers import Dense, LSTM, Dropout
-from sklearn.preprocessing import MinMaxScaler
-from keras.models import Sequential, load_model
-from tensorflow.python.keras.optimizers import Optimizer
+from keras import regularizers
+from matplotlib import dates
+from typing import Tuple
+from scipy import stats
+import tensorflow as tf
+import seaborn as sb
+import pandas as pd
+import numpy as np
+import holidays
+import datetime
+import random
+import pickle
+import time
+import os
 
 class PredictorLSTM:
     """

@@ -1,13 +1,13 @@
 from keras.layers import Dense, LSTM, GRU, SimpleRNN
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 import matplotlib.pyplot as plt
 from typing import Tuple, Dict
-import time, datetime, os
 import tensorflow as tf
 import seaborn as sb
 import pandas as pd
+import datetime, os
 import numpy as np
 
 
