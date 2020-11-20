@@ -68,9 +68,9 @@ specific_file_path = preprocessed_datasets_abs_path + '/' + company_name +'.csv'
     #   1. path to *.csv file [specific_file_path]
     #   2. dictionary object [datasets_dict]
 
-1. dataset = predictor.get_data_from_file(specific_file_path)
-or
-2. dataset = datasets_dict[company_name]
+# 1. dataset = predictor.get_data_from_file(specific_file_path)
+# or 
+# 2. dataset = datasets_dict[company_name]
 
 # Model creation and prediction
 predictor.create_model(dataset)
