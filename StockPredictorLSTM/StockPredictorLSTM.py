@@ -53,6 +53,7 @@ class PredictorLSTM:
 
     def __init__(self, epochs_number: int=120, 
                  correlation_threshold: float=0.75, 
+                 rmse_threshold :float=0.1,
                  error_impact: float=0.8, 
                  split_ratio: float=0.8, 
                  backword_days: int=60,
@@ -64,6 +65,8 @@ class PredictorLSTM:
             ----------
                 correlaction_threshold : float
                     threshold value <0, 1> that filter out features model will be trained on
+                rmse_threshold : float
+                    threshold value [0, 1] that model's rmse cannot exceed
                 split_ratio : float
                     value <0, 1> that split dataset in test and test sets with specified ratio
                 backword_days : int
@@ -77,6 +80,7 @@ class PredictorLSTM:
         """
         self.correlation_threshold = correlation_threshold
         self.scaler = MinMaxScaler(feature_range=(0, 1))
+        self.rmse_threshold = rmse_threshold
         self.backword_days = backword_days
         self.epochs_number = epochs_number
         self.error_impact = error_impact
@@ -166,6 +170,8 @@ class PredictorLSTM:
                                  index=self.significant_features, columns=['RMSE [%]'])
         print("RMSE:")
         print(self.rmse)
+        if not all(row[0] <= (self.rmse_threshold * 100) for idx, row in self.rmse.iterrows()):
+            raise Exception('RMSE value exceeded threshold. Model is not usable.')
 
         # Error distribution
         self.error_distribution = y_test - y_predictions
@@ -343,7 +349,6 @@ class PredictorLSTM:
         opt = tf.keras.optimizers.Adam()
         self.model.compile(optimizer=opt, loss='mean_squared_error', 
                            metrics=['accuracy', 
-                                    'cosine_similarity',
                                     tf.keras.metrics.RootMeanSquaredError()])
         self.model.summary()
 
@@ -493,11 +498,10 @@ class PredictorLSTM:
 
             to_plot = self.one_by_one_df.set_index("Date")
             fig = plt.figure(figsize=(16,8))
-            sb.set_theme()
             fig.canvas.set_window_title("{} predictions for next {} days"\
                 .format(company_name, forword_days))
             ax = sb.lineplot(data=to_plot[[feature]], marker="o")
-            ax.set_xticklabels(to_plot.index.dt.strftime('%d-%m'), rotation=20)
+            ax.set_xticklabels(to_plot.index.strftime('%d-%m'), rotation=20)
             ax.set(xticks=to_plot.index)
             plt.legend(["Predicted close prices"])
             plt.xlabel("Date [dd-mm]")
