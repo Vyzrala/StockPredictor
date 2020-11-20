@@ -10,7 +10,6 @@ import pandas as pd
 import datetime, os
 import numpy as np
 import pickle
-import copy
 
 
 class PredictorNLP:
