@@ -1,7 +1,7 @@
 from keras.layers import Dense, LSTM, GRU, SimpleRNN
+from keras.models import Sequential, load_model
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import MinMaxScaler
-from keras.models import Sequential
 import matplotlib.pyplot as plt
 from typing import Tuple, Dict
 import tensorflow as tf
@@ -9,6 +9,9 @@ import seaborn as sb
 import pandas as pd
 import datetime, os
 import numpy as np
+import pickle
+import copy
+
 
 class PredictorNLP:
     def __init__(self, epochs_number: int=10,
@@ -27,6 +30,7 @@ class PredictorNLP:
         self.y_test = None
         self.model = None
         self.models = {}
+        self.opt = None
         self.rmse = 0
     
     def create_model(self, dataset: pd.DataFrame) -> None:
@@ -49,7 +53,7 @@ class PredictorNLP:
         self.y_test = unscale(y_test)
         # create models
         models = {}
-        for layer in self.layers:
+        for layer in self.layers[1:2]:
             layer_name = str(layer).split('.')[-1][:-2]
             tmp_model = self.initialize_model(layer, shape)
             tmp_history = tmp_model.fit(x_train, y_train, 
@@ -118,11 +122,59 @@ class PredictorNLP:
         except:
             raise NLPError('Error while predicting.')
     
-    def save_model(self, path: str) -> bool:
-        pass
+    def save_model(self, folder_relative_path: str) -> bool:
+        if self.model and self.best_model_data:
+            abs_path = os.getcwd() + folder_relative_path
+            abs_path = abs_path.replace('\\', '/')
+            abs_path = abs_path.replace('//', '/')
+
+            if not os.path.exists(abs_path):
+                os.makedirs(abs_path)
+                
+            self.model.save(abs_path+'/model.h5')
+            
+            del self.best_model_data['model']
+            del self.best_model_data['history']
+            
+            metrics = {
+                'scaler': self.scaler,
+                'model_data': self.best_model_data,
+                'raw_dataset': self.raw_dataset
+            }
+            
+            with open(abs_path+'/data.p','wb') as handler:
+                pickle.dump(metrics, handler)
+            msg = '\nMetrics and model successfully saved in {}'.format(abs_path)
+            print(msg)
+            return True
+        else:
+            raise NLPError('\nNo model to save.')
     
-    def load_model(self, path: str) -> bool:
-        pass
+    def load_model(self, folder_relative_path: str) -> bool:
+        abs_path = os.getcwd() + folder_relative_path
+        abs_path = abs_path.replace('\\', '/')
+        abs_path = abs_path.replace('//', '/')
+        if not os.path.exists(abs_path):
+            msg = '\nNo such path ({})'.format(abs_path)
+            raise NLPError(msg)
+        
+        metrics = {}
+        with open(abs_path+'/data.p', encoding='utf-8') as handler:
+            metrics = pickle.load(handler)
+        
+        self.scaler = metrics.get('scaler', None)
+        self.best_model_data = metrics.get('model_data', None)
+        self.raw_dataset = metrics.get('raw_dataset', None)
+        self.rmse = self.best_model_data['rmse']
+        self.model = load_model(abs_path+'/model.h5')
+        self.model.compile(optimizer=self.opt, 
+                           loss='mean_squared_error', 
+                           metrics=['accuracy', 
+                                    tf.keras.metrics.RootMeanSquaredError()])
+        
+        self.best_model_data['model'] = self.model
+        del metrics
+        return True        
 
     def get_data_from_file(self, path_to_file: str) -> pd.DataFrame:
         path_to_file = path_to_file.replace('\\', '/')
@@ -151,8 +203,9 @@ class PredictorNLP:
         model.add(layer(50, activation='relu', return_sequences=True, input_shape=shape))
         model.add(layer(50, activation='relu'))
         model.add(Dense(1))
-        opt = tf.keras.optimizers.Adam()
-        model.compile(optimizer=opt, 
+        
+        self.opt = tf.keras.optimizers.Adam()
+        model.compile(optimizer=self.opt, 
                       loss='mean_squared_error', 
                       metrics=['accuracy', 
                                tf.keras.metrics.RootMeanSquaredError()])

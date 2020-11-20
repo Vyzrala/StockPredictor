@@ -12,8 +12,10 @@ def main():
     predictor.create_model(dataset)
     prediction = predictor.predict()   
     print(prediction)
-    predictor.get_models_comparison_graph()
+    predictor.save_model('/test')
     
+    # predictor.load_model('/test')
+    # print(predictor.predict())
 
 if __name__ == '__main__':
     main()
