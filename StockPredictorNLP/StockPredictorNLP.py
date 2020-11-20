@@ -14,20 +14,20 @@ class PredictorNLP:
     def __init__(self, epochs_number: int=10,
                  split_ratio: float=0.8, 
                  batch_size: int=1) -> None:
-        self.layers = [LSTM, GRU, SimpleRNN]
-        self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.features = ['Open', 'Close', 'Volume', 'Polarity', 'Subjectivity']
-        self.split_ratio = split_ratio
+        self.scaler = MinMaxScaler(feature_range=(0, 1))
+        self.layers = [LSTM, GRU, SimpleRNN]
         self.epochs_number = epochs_number
-        self.batch_size = batch_size
         self.raw_dataset = pd.DataFrame()
         self.prediction = pd.DataFrame()
-        self.models = {}
+        self.split_ratio = split_ratio
+        self.batch_size = batch_size
         self.best_model_data = {}
-        self.model = None
-        self.rmse = 0
         self.company_name = None
         self.y_test = None
+        self.model = None
+        self.models = {}
+        self.rmse = 0
     
     def create_model(self, dataset: pd.DataFrame) -> None:
         self.raw_dataset = dataset.copy()
@@ -53,9 +53,10 @@ class PredictorNLP:
             layer_name = str(layer).split('.')[-1][:-2]
             tmp_model = self.initialize_model(layer, shape)
             tmp_history = tmp_model.fit(x_train, y_train, 
-                                        epochs=self.epochs_number, 
                                         batch_size=self.batch_size, 
-                                        validation_split=.05)
+                                        epochs=self.epochs_number, 
+                                        validation_split=.05,
+                                        verbose=1)
 
             tmp_predictions = tmp_model.predict(x_test)
             unscaled_predictions = unscale(tmp_predictions)
@@ -64,11 +65,11 @@ class PredictorNLP:
             tmp_rmse = np.sqrt(mean_squared_error(unscaled_y_test, unscaled_predictions))
             msg = '{}: RMSE = {}'.format(layer_name, tmp_rmse)
             print('\n\t', msg, '\n')
-            models[layer_name] = {'layer': layer_name,
-                                  'model': tmp_model, 
-                                  'rmse': tmp_rmse,
+            models[layer_name] = {'predictions': unscaled_predictions,
                                   'history': tmp_history, 
-                                  'predictions': unscaled_predictions}
+                                  'layer': layer_name,
+                                  'model': tmp_model, 
+                                  'rmse': tmp_rmse}
 
         # Select best model by the lowest RMSE value
         best_model_stuff = min(models.values(), key=lambda x: x['rmse'])
@@ -79,9 +80,10 @@ class PredictorNLP:
         final_x, final_y = self.get_xy_sets(final_dataset)
         model = best_model_stuff['model']
         model.fit(final_x, final_y, 
-                  epochs=self.epochs_number,
                   batch_size=self.batch_size,
-                  validation_split=.05)
+                  epochs=self.epochs_number,
+                  validation_split=.05,
+                  verbose=1)
         
         model.summary()
         self.model = model
@@ -171,9 +173,9 @@ class PredictorNLP:
         legend[best_model_index] += ' (BEST)'
         
         plt.figure(figsize=(15, 8))            
-        sb.lineplot(data=self.y_test, linewidth=4,marker='o', color='blueviolet')  # valid
+        sb.lineplot(data=self.y_test, linewidth=4, marker='o', color='blueviolet')  # valid
         sb.lineplot(data=preds, marker='o')        
-        sb.color_palette('rocket')
+        # sb.color_palette('rocket')
         plt.legend(legend)
         plt.title(f'Models comparison on test data for {self.company_name}')
         plt.xlabel('Days')

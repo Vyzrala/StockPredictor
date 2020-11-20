@@ -113,7 +113,7 @@ def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> Dict[s
         by_day = combine_fridays(by_day)
         
         start = str(by_day.index[0])
-        end = str(by_day.index[-1])
+        end = str(by_day.index[-1] + datetime.timedelta(days=1))
         
         stock_data = pdr.DataReader(company_name, 'yahoo', start, end)
         result_ds = pd.concat([stock_data, by_day], join='inner', axis=1)

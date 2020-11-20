@@ -24,18 +24,18 @@ class PredictorLSTM:
         The Predictor class provides all nessecery methods and functionality 
         for predicting future values of stocks for given company.
         All you need to do is insert a data set and excute predict() method.
-        The creators of Predictor class are: Patryk Dunajewski, Marcin Hebdzyński and Kamil Rutkowski.
+        The creators of LSTM predictor are: Patryk Dunajewski, Kamil Rutkowski and Marcin Hebdzyński.
         
         Example use
         -----------
-        from StockPredictorLSTM import Predictor
+        from StockPredictorLSTM import PredictorLSTM
 
         company = 'AAPL'
         forecasted_value_name = 'Close'
         days_forword = 15
         start_date = '2015-01-01'
         end_date = '2020-01-01'
-        predictor = Predictor()
+        predictor = PredictorLSTM()
 
         # Use 1 - Initial use
         dataset = predictor.download_dataset(start_date, end_date, company)
@@ -51,8 +51,12 @@ class PredictorLSTM:
         predictor.prediction_plot(forecasted_value_name, company, days_forword)
     """
 
-    def __init__(self, correlation_threshold: float=0.75, split_ratio: float=0.8, backword_days: int=60,
-                 epochs_number: int=120, batch: int=32, error_impact: float=0.8) -> None:
+    def __init__(self, epochs_number: int=120, 
+                 correlation_threshold: float=0.75, 
+                 error_impact: float=0.8, 
+                 split_ratio: float=0.8, 
+                 backword_days: int=60,
+                 batch: int=32) -> None:
         """
             Description: Initialization method where you can specify many parameters
 
@@ -71,24 +75,24 @@ class PredictorLSTM:
                 error_impact : float
                     how much of error value will be added to predicted value (noice)
         """
-        self.raw_dataset = None
         self.correlation_threshold = correlation_threshold
-        self.train_data = None
-        self.test_data = None
-        self.split_ratio = split_ratio
+        self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.backword_days = backword_days
         self.epochs_number = epochs_number
+        self.error_impact = error_impact
+        self.split_ratio = split_ratio
+        self.error_distribution = None
+        self.number_of_features = None
         self.first_training_time = 0
         self.final_training_time = 0
         self.total_training_time = 0
+        self.one_by_one_df = None
+        self.raw_dataset = None
+        self.train_data = None
+        self.test_data = None
         self.batch = batch
-        self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.model = None
         self.rmse = None
-        self.error_distribution = None
-        self.number_of_features = None
-        self.error_impact = error_impact
-        self.one_by_one_df = None
 
     def create_model(self, dataset: pd.DataFrame) -> None:
         """
@@ -105,8 +109,8 @@ class PredictorLSTM:
         self.raw_dataset = dataset.copy()
         
         # Additional features
-        dataset['High_Low diff'] = dataset['High'] - dataset['Low']
         dataset['Open_Close diff'] = dataset['Open'] - dataset['Close']
+        dataset['High_Low diff'] = dataset['High'] - dataset['Low']
         
         # Creating correlation matrix, extracting useful features for training
         correlation_matrix = dataset.corr()
@@ -150,15 +154,14 @@ class PredictorLSTM:
 
         # Testing model on test set
         x_test, y_test = self.get_xy_sets(self.test_data, self.backword_days)
-        y_predictions = None
-        if x_test is None and y_test is None:
+        if x_test is None or y_test is None:
             return None
         y_predictions = self.model.predict(x_test)
 
         # Model evaluation
         y_predictions = self.scaler.inverse_transform(y_predictions)
         y_test = self.scaler.inverse_transform(y_test)
-        self.rmse = pd.DataFrame([np.sqrt(np.mean((y_test[:,i] - y_predictions[:,i])**2))
+        self.rmse = pd.DataFrame([np.sqrt(np.mean((y_test[:, i] - y_predictions[:, i])**2))
                                   for i in range(y_test.shape[1])],
                                  index=self.significant_features, columns=['RMSE [%]'])
         print("RMSE:")
@@ -335,10 +338,13 @@ class PredictorLSTM:
                         activity_regularizer=regularizers.l2(1e-5)))
         self.model.add(Dropout(0.05))
         self.model.add(Dense(shape[1]))
-
-        self.model.compile(optimizer='adam', 
-                           loss='mean_squared_error', 
-                           metrics=['accuracy', tf.keras.metrics.RootMeanSquaredError()])
+        
+        # opt = tf.keras.optimizers.SGD()
+        opt = tf.keras.optimizers.Adam()
+        self.model.compile(optimizer=opt, loss='mean_squared_error', 
+                           metrics=['accuracy', 
+                                    'cosine_similarity',
+                                    tf.keras.metrics.RootMeanSquaredError()])
         self.model.summary()
 
     def change_dataset(self, new_dataset: pd.DataFrame) -> None:
@@ -487,12 +493,12 @@ class PredictorLSTM:
 
             to_plot = self.one_by_one_df.set_index("Date")
             fig = plt.figure(figsize=(16,8))
+            sb.set_theme()
             fig.canvas.set_window_title("{} predictions for next {} days"\
                 .format(company_name, forword_days))
             ax = sb.lineplot(data=to_plot[[feature]], marker="o")
-            ax.set_xticklabels(to_plot.index, rotation=20)
+            ax.set_xticklabels(to_plot.index.dt.strftime('%d-%m'), rotation=20)
             ax.set(xticks=to_plot.index)
-            ax.xaxis.set_major_formatter(dates.DateFormatter("%d-%m"))
             plt.legend(["Predicted close prices"])
             plt.xlabel("Date [dd-mm]")
             plt.ylabel("Price [$]")
