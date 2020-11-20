@@ -1,14 +1,20 @@
 # StockPredictor
   
 ### Thesis project of 4 handsome and masculine men :muscle:  
-##
 University: Gdansk University of Technology  
 Faculty: Electronics, Telecomunications and Infromatics  
 Filed of studies: Data Engineering  
 Degree: Bechelor
+
+### Team composition:  
+* Witold Bazela
+* Patryk Dunajewski  
+* Kamil Rutkowski  
+* Marcin Hebdzyński
     
 # Instalation
 
+> *instalation package is in /distribution/ directory*
 ```
 Windows: pip install StockPredictor-(version).tar.gz
 Linux: pip3 install StockPredictor-(version).tar.gz
