@@ -69,4 +69,12 @@ or
 # Model creation and prediction
 predictor.create_model(dataset)
 prediction = predictor.predict()
+
+# Saving model
+save_folder_path = '/' + company_name  # '/AAPL'
+predictor.save_model(save_folder_path)
+
+# Loading saved model and predicting
+predictor.load_model(save_folder_path)  
+prediction = predictor.predict()
 ```

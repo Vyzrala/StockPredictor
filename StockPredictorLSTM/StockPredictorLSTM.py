@@ -274,7 +274,6 @@ class PredictorLSTM:
             del metrics
             path = folder_path+"/model.h5"
             self.model = load_model(path)
-            self.model.compile(optimizer='adam', loss='mean_squared_error')
             print("Model summary:\n", self.model.summary())
             
             return True

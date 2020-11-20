@@ -159,18 +159,15 @@ class PredictorNLP:
             raise NLPError(msg)
         
         metrics = {}
-        with open(abs_path+'/data.p', encoding='utf-8') as handler:
+        with open(abs_path+'/data.p', 'rb') as handler:
             metrics = pickle.load(handler)
         
         self.scaler = metrics.get('scaler', None)
-        self.best_model_data = metrics.get('model_data', None)
         self.raw_dataset = metrics.get('raw_dataset', None)
+        self.best_model_data = metrics.get('model_data', None)
         self.rmse = self.best_model_data['rmse']
+
         self.model = load_model(abs_path+'/model.h5')
-        self.model.compile(optimizer=self.opt, 
-                           loss='mean_squared_error', 
-                           metrics=['accuracy', 
-                                    tf.keras.metrics.RootMeanSquaredError()])
         
         self.best_model_data['model'] = self.model
         del metrics
@@ -213,7 +210,7 @@ class PredictorNLP:
     
     def get_models_comparison_graph(self):
         if not (self.models or self.best_model_data): 
-            raise NLPError('No models data tu display.')
+            raise NLPError('No models data to display.')
         
         preds, names = [], []
         for model_data in self.models.values():
