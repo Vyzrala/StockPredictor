@@ -6,7 +6,7 @@ with open('README.md', 'r') as ld:
 
 setuptools.setup(
     name="StockPredictor",
-    version="0.3.0",
+    version="0.3.1",
     description="Thesis project",
     long_description=long_description,
     author="Marcin Hebdzynski",
@@ -18,7 +18,6 @@ setuptools.setup(
     install_requires=[
         'pandas>=1.1.1',
         'tensorflow>=2.3.0',
-        'tensorflow-estimator>=2.3.0',
         'numpy>=1.18.5',
         'seaborn>=0.10.1',
         'Keras>=2.4.3',
@@ -26,7 +25,6 @@ setuptools.setup(
         'pandas-datareader>=0.9.0',
         'holidays>=0.10.3',
         'scikit-learn>=0.23',
-        'scipy>=1.4.1',
         'textblob>=0.15.3',
     ],
 )

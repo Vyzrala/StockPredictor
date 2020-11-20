@@ -1,14 +1,20 @@
 # StockPredictor
   
 ### Thesis project of 4 handsome and masculine men :muscle:  
-##
 University: Gdansk University of Technology  
 Faculty: Electronics, Telecomunications and Infromatics  
 Filed of studies: Data Engineering  
 Degree: Bechelor
+
+### Team composition:  
+* Witold Bazela
+* Patryk Dunajewski  
+* Kamil Rutkowski  
+* Marcin Hebdzyński
     
 # Instalation
 
+> *instalation package is in /distribution/ directory*
 ```
 Windows: pip install StockPredictor-(version).tar.gz
 Linux: pip3 install StockPredictor-(version).tar.gz
@@ -62,9 +68,9 @@ specific_file_path = preprocessed_datasets_abs_path + '/' + company_name +'.csv'
     #   1. path to *.csv file [specific_file_path]
     #   2. dictionary object [datasets_dict]
 
-1. dataset = predictor.get_data_from_file(specific_file_path)
-or
-2. dataset = datasets_dict[company_name]
+# 1. dataset = predictor.get_data_from_file(specific_file_path)
+# or 
+# 2. dataset = datasets_dict[company_name]
 
 # Model creation and prediction
 predictor.create_model(dataset)
