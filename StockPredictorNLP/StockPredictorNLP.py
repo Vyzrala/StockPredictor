@@ -10,7 +10,7 @@ import pandas as pd
 import datetime, os
 import numpy as np
 import pickle
-
+from tools import NLPError
 
 class PredictorNLP:
     def __init__(self, epochs_number: int=10,
@@ -52,7 +52,7 @@ class PredictorNLP:
         self.y_test = unscale(y_test)
         # create models
         models = {}
-        for layer in self.layers[1:2]:
+        for layer in self.layers:
             layer_name = str(layer).split('.')[-1][:-2]
             tmp_model = self.initialize_model(layer, shape)
             tmp_history = tmp_model.fit(x_train, y_train, 
@@ -230,5 +230,3 @@ class PredictorNLP:
         plt.xlabel('Days')
         plt.ylabel('Open price [$]')
         plt.show()
-
-class NLPError(Exception): pass

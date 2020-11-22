@@ -4,23 +4,14 @@ import glob, os, logging, datetime, re, copy
 import pandas_datareader as pdr
 from textblob import TextBlob
 from pathlib import Path
+import time
 
 
-settings = {
-    'format': '%(asctime)s | %(levelname)s | %(funcName)s | %(lineno)s | %(message)s',
-    'log_file': '/tools.log',
-    'log_folder': os.getcwd()+'/log',
-}
-Path(settings['log_folder']).mkdir(parents=True, exist_ok=True)
-logging.basicConfig(
-    filename=settings['log_folder'] + settings['log_file'], 
-    filemode='a',
-    format=settings['format'],
-    level=logging.INFO
-)
+class NLPError(Exception): pass
 
 
-companies_keywords = {
+DATE_CUTOFF = '2020-07-14'
+COMPANIES_KEYWORDS = {
 	'AAPL': [' Apple ','Iphone','MacOS','Ipod','Ipad','AirPods','HomePod',
 			 'Arthur Levinson','Tim Cook', 'Steve Jobs','Steve Wozniak',' Jeff Williams',
 			 'Ronald Wayne','Apple Park','Silicon Valley', 'Apple watch','Apple pay',
@@ -38,47 +29,44 @@ companies_keywords = {
 			 'John Hennessy','Sundar Pichai', 'Ruth Porat','DeepMind','Chrome',
 			 'Youtube',' YT ','TensorFlow','Android','Nexus'],
 }
+SETTINGS = {
+    'format': '%(asctime)s | %(levelname)s | %(funcName)s | %(lineno)s | %(message)s',
+    'log_file': '/tools.log',
+    'log_folder': os.getcwd()+'/log',
+}
+Path(SETTINGS['log_folder']).mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    filename=SETTINGS['log_folder'] + SETTINGS['log_file'], 
+    filemode='a',
+    format=SETTINGS['format'],
+    level=logging.INFO
+)
 
-def preprocess_raw_datasets(input_folder_abs_path: str, 
-                            output_folder_relative_path: str) -> \
-                                Tuple[Dict[str, pd.DataFrame], str]:
-    print('-> Pre-processing start...')
-    input_folder_abs_path += '/'
-    input_folder_abs_path = input_folder_abs_path.replace('\\', '/')
-    input_folder_abs_path = input_folder_abs_path.replace('//', '/')
+
+def preprocess_raw_datasets(all_tweets: pd.DataFrame, yahoo_data: dict) -> Dict[str, pd.DataFrame]:
+    if not all(k in COMPANIES_KEYWORDS.keys() for k in yahoo_data.keys()):
+        raise NLPError('Keys in yahoo_data do not match with companies')
     
-    files_names = glob.glob(input_folder_abs_path+'*.csv')
-    grouped_datasets = group_filter_files(files_names)
-    combined_datasets = sentiment_stock_combine(grouped_datasets)
+    all_tweets.drop(columns=['Id'], inplace=True)
+    tweets_by_company = get_tweets_by_company(all_tweets)
+    sentimeted_data = sentiment_stock_combine(tweets_by_company)
     
-    output_path = os.getcwd() + '/'+output_folder_relative_path
-    output_path = output_path.replace('\\', '/')
-    Path(output_path).mkdir(parents=True, exist_ok=True)
-    
-    # Saving to file
-    for k, v in combined_datasets.items():
-        v.to_csv(output_path+'/'+k+'.csv', index=False)
-        
-    print("-> Saved in", output_path)
-    return combined_datasets, output_path
-    
-def group_filter_files(files_names: list) -> Dict[str, pd.DataFrame]:
-    print("-> Filtering and grouping files...")
+    return sentimeted_data
+
+
+def get_tweets_by_company(all_tweets: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+    print("-> Filtering and grouping tweets dataframe...")
+    t0 = time.time()
     combined_dfs = {}
     columns = ['Text', 'Date', 'Nick', 'Shares', 'Likes']
     
-    # Filtering by keywords for each company
-    for filename in files_names:
-        tmp_df = pd.read_csv(filename)
-        tmp_df.drop(columns=['Id'], inplace=True)
-        for company, keywords in companies_keywords.items():
-            tmp_mask = tmp_df.Text.apply(lambda content: create_mask(content, keywords))
-            filtered = tmp_df[tmp_mask]
-            
-            current = combined_dfs.get(company, pd.DataFrame(columns=columns))
-            combined_dfs[company] = pd.concat([current, filtered], ignore_index=True)
-            del tmp_mask, current, filtered
-        del tmp_df
+    for company, keywords in COMPANIES_KEYWORDS.items():
+        tmp_mask = all_tweets.Text.apply(lambda content: create_mask(content, keywords))
+        filtered = all_tweets[tmp_mask]
+        
+        current = combined_dfs.get(company, pd.DataFrame(columns=columns))
+        combined_dfs[company] = pd.concat([current, filtered], ignore_index=True)
+        del tmp_mask, current, filtered
     
     for k, v in combined_dfs.items():
         v.Text = v.Text.apply(lambda x: " ".join(re.sub("([^0-9A-Za-z \t])|(\w+://\S+)", "", x).split()))
@@ -88,9 +76,10 @@ def group_filter_files(files_names: list) -> Dict[str, pd.DataFrame]:
         v.sort_values(by='Date', inplace=True)
         msg = '- {} = {}'.format(k, v.shape)
         logging.info(msg)
-                
-    return combined_dfs
     
+    print('(time: {:.3f}s)'.format(time.time() - t0))
+    return combined_dfs
+
 
 def create_mask(content: str, keywords: List[str]) -> List[bool]:
 	content_ = content.lower()
@@ -100,10 +89,11 @@ def create_mask(content: str, keywords: List[str]) -> List[bool]:
 
 def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
     print('-> Sentiment and stock combining...')
+    t0 = time.time()
     combined_datasets = {}
     for company_name, dataset in grouped_datasets.items():
         tmp_df = copy.deepcopy(dataset)
-        tmp_df = tmp_df[tmp_df.Date >= '2020-07-14']
+        tmp_df = tmp_df[tmp_df.Date >= DATE_CUTOFF]
         tmp_df['Polarity'] = tmp_df.Text.apply(lambda content: TextBlob(content).polarity)
         tmp_df['Subjectivity'] = tmp_df.Text.apply(lambda content: TextBlob(content).subjectivity)
         tmp_df.drop(columns=['Text', 'Nick'], inplace=True)
@@ -123,7 +113,9 @@ def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> Dict[s
         combined_datasets[company_name] = result_ds
   
     del grouped_datasets
+    print('(time: {:.3f}s)'.format(time.time() - t0))
     return combined_datasets
+
 
 def combine_fridays(grouped_dataset: pd.DataFrame) -> pd.DataFrame:
     for day in grouped_dataset.index:
@@ -140,3 +132,41 @@ def combine_fridays(grouped_dataset: pd.DataFrame) -> pd.DataFrame:
             grouped_dataset.drop(index=to_mean[1:], inplace=True)
     
     return grouped_dataset
+
+def read_files_and_yahoo(path_to_raw: str) -> tuple:
+    print('-> Files reading')
+    t0 = time.time()
+    
+    files = glob.glob(path_to_raw+'/*.csv')
+
+    dtypes = {
+        'Id':'str', 
+        'Text': 'str', 
+        'Date': 'str', 
+        'Nick': 'str', 
+        'Shares': 'float', 
+        'Likes': 'float',
+    }
+
+    all_tweets = pd.DataFrame(columns = dtypes.keys())
+    all_tweets = all_tweets.astype(dtypes)
+
+    for file in files:
+        tmp = pd.read_csv(file)
+        all_tweets = all_tweets.append(tmp)
+
+
+    all_tweets = all_tweets[all_tweets.Date != 'BillGates']
+    all_tweets = all_tweets[all_tweets.Date >= '2020-07-14']
+    # all_tweets.Date = pd.to_datetime(all_tweets.Date)
+
+    start_date = all_tweets.Date.min()
+    end_date = all_tweets.Date.max()
+    yahoo_data = {}
+    companies = ['AAPL', 'FB', 'GOOG', 'TWTR']
+
+    print('-> Yahoo download', end=' ')
+    for company in companies:
+        yahoo_data[company] = pdr.DataReader(company, 'yahoo', start_date, end_date)
+    print('(time: {:.3f})'.format(time.time() - t0))
+    return all_tweets, yahoo_data
