@@ -55,22 +55,13 @@ from StockPredictorNLP import PredictorNLP
 # Data preprocessing
 predictor = PredictorNLP()
 company_name = 'AAPL'
-raw_datasets_folder_path = 'C:/aboslute/exmaple/path' 
-preprocessed_datasets_folder = 'preprocessed datasets' 
 
-datasets_dict, preprocessed_datasets_abs_path = \
-    preprocess_raw_datasets(raw_datasets_folder_path, \
-        preprocessed_datasets_folder)
+# all_tweets - pandas DataFrame with all collected tweets
+# yahoo_data - dict of stock data downloaded from yahoo finance where key is a company name and value pandas dataframe 
 
-specific_file_path = preprocessed_datasets_abs_path + '/' + company_name +'.csv'
-# Dataset loading
-    # Data are now avaialble via two ways:
-    #   1. path to *.csv file [specific_file_path]
-    #   2. dictionary object [datasets_dict]
+datasets_dict = preprocess_raw_datasets(all_tweets, yahoo_data)
 
-# 1. dataset = predictor.get_data_from_file(specific_file_path)
-# or 
-# 2. dataset = datasets_dict[company_name]
+dataset = datasets_dict[company_name]
 
 # Model creation and prediction
 predictor.create_model(dataset)
