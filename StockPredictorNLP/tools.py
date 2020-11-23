@@ -49,7 +49,7 @@ def preprocess_raw_datasets(all_tweets: pd.DataFrame, yahoo_data: dict) -> Dict[
     
     all_tweets.drop(columns=['Id'], inplace=True)
     tweets_by_company = get_tweets_by_company(all_tweets)
-    sentimeted_data = sentiment_stock_combine(tweets_by_company)
+    sentimeted_data = sentiment_stock_combine(tweets_by_company, yahoo_data)
     
     return sentimeted_data
 
@@ -77,7 +77,7 @@ def get_tweets_by_company(all_tweets: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         msg = '- {} = {}'.format(k, v.shape)
         logging.info(msg)
     
-    print('(time: {:.3f}s)'.format(time.time() - t0))
+    print('\t(time: {:.3f}s)'.format(time.time() - t0))
     return combined_dfs
 
 
@@ -87,7 +87,9 @@ def create_mask(content: str, keywords: List[str]) -> List[bool]:
 	return any(item for item in keywords_ if item in content_)
 
 
-def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame],
+                            yahoo_data: Dict[str, pd.DataFrame]) \
+                                -> Dict[str, pd.DataFrame]:
     print('-> Sentiment and stock combining...')
     t0 = time.time()
     combined_datasets = {}
@@ -105,7 +107,7 @@ def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> Dict[s
         start = str(by_day.index[0])
         end = str(by_day.index[-1] + datetime.timedelta(days=1))
         
-        stock_data = pdr.DataReader(company_name, 'yahoo', start, end)
+        stock_data = yahoo_data[company_name]
         result_ds = pd.concat([stock_data, by_day], join='inner', axis=1)
         result_ds.reset_index(inplace=True)
         msg = ' - {}:\tshape = {}'.format(company_name, result_ds.shape)
@@ -113,7 +115,7 @@ def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame]) -> Dict[s
         combined_datasets[company_name] = result_ds
   
     del grouped_datasets
-    print('(time: {:.3f}s)'.format(time.time() - t0))
+    print('\t(time: {:.3f}s)'.format(time.time() - t0))
     return combined_datasets
 
 
@@ -136,9 +138,8 @@ def combine_fridays(grouped_dataset: pd.DataFrame) -> pd.DataFrame:
 def read_files_and_yahoo(path_to_raw: str) -> tuple:
     print('-> Files reading')
     t0 = time.time()
-    
-    files = glob.glob(path_to_raw+'/*.csv')
-
+    path_to_raw += '/*.csv'
+    files = glob.glob(path_to_raw)
     dtypes = {
         'Id':'str', 
         'Text': 'str', 
@@ -157,7 +158,7 @@ def read_files_and_yahoo(path_to_raw: str) -> tuple:
 
 
     all_tweets = all_tweets[all_tweets.Date != 'BillGates']
-    all_tweets = all_tweets[all_tweets.Date >= '2020-07-14']
+    all_tweets = all_tweets[all_tweets.Date >= DATE_CUTOFF]
     # all_tweets.Date = pd.to_datetime(all_tweets.Date)
 
     start_date = all_tweets.Date.min()
@@ -165,8 +166,8 @@ def read_files_and_yahoo(path_to_raw: str) -> tuple:
     yahoo_data = {}
     companies = ['AAPL', 'FB', 'GOOG', 'TWTR']
 
-    print('-> Yahoo download', end=' ')
+    print('-> Yahoo download')
     for company in companies:
         yahoo_data[company] = pdr.DataReader(company, 'yahoo', start_date, end_date)
-    print('(time: {:.3f})'.format(time.time() - t0))
+    print('\t(time: {:.3f}s)'.format(time.time() - t0))
     return all_tweets, yahoo_data

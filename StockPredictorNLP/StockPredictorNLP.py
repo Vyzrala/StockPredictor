@@ -10,7 +10,7 @@ import pandas as pd
 import datetime, os
 import numpy as np
 import pickle
-from tools import NLPError
+from .tools import NLPError
 
 class PredictorNLP:
     def __init__(self, epochs_number: int=10,
