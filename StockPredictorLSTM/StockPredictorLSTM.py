@@ -53,6 +53,7 @@ class PredictorLSTM:
 
     def __init__(self, epochs_number: int=120, 
                  correlation_threshold: float=0.75, 
+                 second_train :bool= False,
                  rmse_threshold :float=0.1,
                  error_impact: float=0.8, 
                  split_ratio: float=0.8, 
@@ -67,6 +68,8 @@ class PredictorLSTM:
                     threshold value <0, 1> that filter out features model will be trained on
                 rmse_threshold : float
                     threshold value [0, 1] that model's rmse cannot exceed
+                second_train : bool
+                    optionality of final training
                 split_ratio : float
                     value <0, 1> that split dataset in test and test sets with specified ratio
                 backword_days : int
@@ -84,6 +87,7 @@ class PredictorLSTM:
         self.backword_days = backword_days
         self.epochs_number = epochs_number
         self.error_impact = error_impact
+        self.second_train = second_train
         self.split_ratio = split_ratio
         self.error_distribution = None
         self.number_of_features = None
@@ -171,25 +175,26 @@ class PredictorLSTM:
         print("RMSE:")
         print(self.rmse)
         if not all(row[0] <= (self.rmse_threshold * 100) for idx, row in self.rmse.iterrows()):
-            raise Exception('RMSE value exceeded threshold. Model is not usable.')
+            raise Exception('RMSE value exceeded threshold ({}). Model is not usable.'.format(self.rmse_threshold))
 
         # Error distribution
         self.error_distribution = y_test - y_predictions
         self.error_distribution = self.error_distribution[
             (np.abs(stats.zscore(self.error_distribution))<3).all(axis=1)]
         
-        # # Final training
-        # final_dataset = self.scaler.fit_transform(dataset)
-        # final_x, final_y = self.get_xy_sets(final_dataset, self.backword_days)
-        # print("\nFinal training:")
-        # start_time = time.time()
-        # self.model.fit(final_x, final_y, 
-        #                epochs=self.epochs_number, 
-        #                batch_size=self.batch, 
-        #                validation_split=0.1)
-        # self.final_training_time = time.time() - start_time
-        # print("Final traning time: {:.2f} minutes ({:.3f}s)"\
-        #     .format(self.final_training_time/60, self.final_training_time))
+        # Final training (optional)
+        if self.second_train:
+            final_dataset = self.scaler.fit_transform(dataset)
+            final_x, final_y = self.get_xy_sets(final_dataset, self.backword_days)
+            print("\nFinal training:")
+            start_time = time.time()
+            self.model.fit(final_x, final_y, 
+                        epochs=self.epochs_number, 
+                        batch_size=self.batch, 
+                        validation_split=0.1)
+            self.final_training_time = time.time() - start_time
+            print("Final traning time: {:.2f} minutes ({:.3f}s)"\
+                .format(self.final_training_time/60, self.final_training_time))
         self.total_training_time = self.final_training_time + self.first_training_time
 
     def predict(self, days: int) -> pd.DataFrame: 
