@@ -105,7 +105,8 @@ def sentiment_stock_combine(grouped_datasets: Dict[str, pd.DataFrame],
         by_day = combine_fridays(by_day)
         
         stock_data = yahoo_data[company_name]
-        stock_data.set_index(pd.to_datetime(stock_data.Date), inplace=True)
+        if 'Date' in stock_data.columns:
+            stock_data.set_index(pd.to_datetime(stock_data.Date), inplace=True)
         
         result_ds = pd.concat([stock_data, by_day], join='inner', axis=1)
         # result_ds.reset_index(inplace=True)
@@ -162,6 +163,7 @@ def read_files_and_yahoo(path_to_raw: str) -> tuple:
 
     start_date = all_tweets.Date.min()
     end_date = all_tweets.Date.max()
+    print(all_tweets.info())
     yahoo_data = {}
     companies = ['AAPL', 'FB', 'GOOG', 'TWTR']
 
