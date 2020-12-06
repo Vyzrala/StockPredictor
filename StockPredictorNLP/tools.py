@@ -172,3 +172,8 @@ def read_files_and_yahoo(path_to_raw: str) -> tuple:
         yahoo_data[company] = pdr.DataReader(company, 'yahoo', start_date, end_date)
     print('\t(time: {:.3f}s)'.format(time.time() - t0))
     return all_tweets, yahoo_data
+
+def save_to_files(data: pd.DataFrame, path: str):
+    for k, v in data.items():
+        v.to_csv(path+'/'+k+'.csv')
+    
