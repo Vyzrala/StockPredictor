@@ -155,15 +155,14 @@ def read_files_and_yahoo(path_to_raw: str) -> tuple:
     for file in files:
         tmp = pd.read_csv(file)
         all_tweets = all_tweets.append(tmp)
-
-
+    print('All tweets shape:', all_tweets.shape)
+    
     all_tweets = all_tweets[all_tweets.Date != 'BillGates']
     all_tweets = all_tweets[all_tweets.Date >= DATE_CUTOFF]
     # all_tweets.Date = pd.to_datetime(all_tweets.Date)
 
     start_date = all_tweets.Date.min()
     end_date = all_tweets.Date.max()
-    print(all_tweets.info())
     yahoo_data = {}
     companies = ['AAPL', 'FB', 'GOOG', 'TWTR']
 
