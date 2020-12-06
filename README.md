@@ -7,7 +7,7 @@ Filed of studies: Data Engineering
 Degree: Bechelor
 
 ### Team composition:  
-* [Witold Bazela](@Archeont)
+* [Witold Bazela](https://github.com/Archeont)
 * Patryk Dunajewski  
 * Kamil Rutkowski  
 * Marcin Hebdzyński
