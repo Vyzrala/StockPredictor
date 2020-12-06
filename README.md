@@ -10,7 +10,7 @@ Degree: Bechelor
 * [Witold Bazela](https://github.com/Archeont)
 * Patryk Dunajewski  
 * Kamil Rutkowski  
-* Marcin Hebdzyński
+* [Marcin Hebdzyński](https://github.com/Vyzrala)
     
 # Instalation
 
